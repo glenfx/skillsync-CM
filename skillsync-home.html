@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillSync CM — Where Talent Meets Opportunity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Outfit:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ─── RESET & BASE ─── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:        #06090F;
+  --surface:   #0C1220;
+  --surface2:  #111827;
+  --surface3:  #0a1628;
+  --border:    rgba(255,255,255,0.06);
+  --border2:   rgba(255,255,255,0.10);
+  --green:     #00C46A;
+  --green-dim: #009950;
+  --gold:      #E8B84B;
+  --gold-dim:  #B8902A;
+  --white:     #F0F4F8;
+  --muted:     #5A7080;
+  --text:      #C8D8E4;
+  --red:       #E85C5C;
+  --blue:      #5C9EE8;
+  --purple:    #A05CE8;
+  --radius:    12px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+
+/* ─── NAV ANIMATION ─── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 48px;
+  height: 68px;
+  background: rgba(6,9,15,0.90);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  animation: slideDown 0.6s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nav-logo {
+  display: flex; align-items: baseline; gap: 2px;
+  font-family: 'Playfair Display', serif;
+  font-weight: 900; font-size: 22px; letter-spacing: -0.5px;
+  text-decoration: none;
+}
+.nav-logo .s1 { color: var(--white); }
+.nav-logo .s2 { color: var(--green); }
+.nav-logo .s3 { color: var(--gold); font-size: 18px; margin-left: 5px; }
+.nav-badge {
+  font-size: 10px; font-weight: 600; letter-spacing: 1px;
+  background: rgba(0,196,106,0.1); border: 1px solid rgba(0,196,106,0.2);
+  color: var(--green); padding: 2px 8px; border-radius: 100px;
+  margin-left: 10px; font-family: 'DM Mono', monospace;
+}
+.nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
+.nav-links a { 
+  font-size: 13.5px; font-weight: 500; color: var(--muted); text-decoration: none; 
+  letter-spacing: 0.3px; transition: color 0.2s;
+  position: relative;
+}
+.nav-links a:hover { color: var(--white); }
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -28px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--green);
+  transition: width 0.3s ease;
+}
+.nav-links a:hover::after {
+  width: 100%;
+}
+.nav-links a.active { color: var(--white); }
+.nav-links a.active::after {
+  width: 100%;
+}
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.btn-ghost-sm {
+  font-size: 13px; font-weight: 500; color: var(--muted);
+  background: none; border: none; cursor: pointer; padding: 8px 16px;
+  border-radius: 6px; transition: all 0.2s; font-family: 'Outfit', sans-serif;
+}
+.btn-ghost-sm:hover { color: var(--white); background: rgba(255,255,255,0.04); }
+.btn-nav-cta {
+  background: var(--green); color: #000; border: none; cursor: pointer;
+  padding: 9px 22px; border-radius: 6px; font-weight: 600; font-size: 13px;
+  transition: all 0.2s; font-family: 'Outfit', sans-serif;
+}
+.btn-nav-cta:hover { background: #00d474; transform: translateY(-1px); }
+
+/* ─── HERO WITH BACKGROUND IMAGE ─── */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 120px 48px 80px;
+  overflow: hidden;
+}
+
+.hero-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: linear-gradient(135deg, rgba(6,9,15,0.88) 0%, rgba(6,9,15,0.75) 100%), 
+                    url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1600&q=80');
+  background-size: cover;
+  background-position: center 35%;
+  background-repeat: no-repeat;
+  z-index: -1;
+}
+
+.hero-background::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 150px;
+  background: linear-gradient(to top, var(--bg), transparent);
+}
+
+.hero-glow-green {
+  position: absolute; top: -200px; right: -200px;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(0,196,106,0.07) 0%, transparent 65%);
+  pointer-events: none;
+}
+.hero-glow-gold {
+  position: absolute; bottom: -150px; left: -100px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(232,184,75,0.05) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.hero-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 60px; align-items: center;
+  max-width: 1280px; margin: 0 auto; width: 100%;
+  position: relative; z-index: 2;
+}
+
+.hero-left {
+  animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(0,196,106,0.12);
+  border: 1px solid rgba(0,196,106,0.25);
+  border-radius: 100px; padding: 6px 16px 6px 8px;
+  margin-bottom: 28px; width: fit-content;
+  animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,196,106,0.2); }
+  50% { box-shadow: 0 0 0 8px rgba(0,196,106,0); }
+}
+
+.hero-badge-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green); animation: pulse 2s infinite;
+}
+.hero-badge span { font-size: 12px; font-weight: 500; color: var(--green); letter-spacing: 0.5px; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(42px, 5vw, 68px);
+  font-weight: 900; line-height: 1.08;
+  letter-spacing: -2px; color: var(--white); margin-bottom: 24px;
+}
+.hero-title .accent { color: var(--green); }
+.hero-title .accent-gold { color: var(--gold); }
+.hero-sub {
+  font-size: 16.5px; color: var(--muted); line-height: 1.75;
+  max-width: 480px; margin-bottom: 40px; font-weight: 300;
+}
+.hero-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--green); color: #000;
+  padding: 14px 28px; border-radius: 8px;
+  font-size: 14.5px; font-weight: 600;
+  text-decoration: none; transition: all 0.3s ease;
+  font-family: 'Outfit', sans-serif; border: none; cursor: pointer;
+}
+.btn-primary:hover { background: #00d474; transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,196,106,0.25); }
+.btn-primary svg { transition: transform 0.2s; }
+.btn-primary:hover svg { transform: translateX(3px); }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--text); padding: 14px 24px; border-radius: 8px;
+  font-size: 14.5px; font-weight: 500; text-decoration: none;
+  border: 1px solid var(--border); transition: all 0.3s ease;
+  font-family: 'Outfit', sans-serif; background: none; cursor: pointer;
+}
+.btn-outline:hover { border-color: var(--border2); background: rgba(255,255,255,0.03); color: var(--white); transform: translateY(-2px); }
+.hero-stats {
+  display: flex; gap: 32px; margin-top: 52px;
+  padding-top: 40px; border-top: 1px solid var(--border);
+}
+.stat-item {
+  animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+.stat-val { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--white); line-height: 1; margin-bottom: 4px; }
+.stat-val span { color: var(--green); }
+.stat-label { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; }
+
+/* ─── DASHBOARD CARD WITH HOVER ANIMATION ─── */
+.hero-visual { position: relative; animation: fadeInRight 0.8s ease-out 0.3s both; }
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.dashboard-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 50px 100px rgba(0,0,0,0.6);
+}
+
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+}
+.card-dots { display: flex; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-r{background:#FF5F57} .dot-y{background:#FEBC2E} .dot-g{background:#28C840}
+.card-title { font-size: 13px; font-weight: 600; color: var(--white); }
+.card-sub { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.card-body { padding: 20px; }
+.skill-bars { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+.skill-row { display: flex; flex-direction: column; gap: 6px; }
+.skill-meta { display: flex; justify-content: space-between; }
+.skill-name { font-size: 12px; color: var(--text); font-weight: 500; }
+.skill-pct { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.skill-track { height: 5px; background: rgba(255,255,255,0.06); border-radius: 100px; overflow: hidden; }
+.skill-fill { height: 100%; border-radius: 100px; animation: fillBar 1.5s ease forwards; }
+@keyframes fillBar { from{width:0%} }
+.mini-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mini-card {
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px;
+  transition: all 0.3s ease;
+}
+.mini-card:hover {
+  background: rgba(255,255,255,0.05);
+  transform: translateY(-2px);
+}
+.mini-label { font-size: 10.5px; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.3px; }
+.mini-val { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--white); line-height: 1; }
+.mini-val.green{color:var(--green)} .mini-val.gold{color:var(--gold)}
+.mini-change { font-size: 10px; margin-top: 4px; font-family: 'DM Mono', monospace; }
+.mini-change.up{color:var(--green)} .mini-change.warn{color:var(--gold)}
+.float-accent {
+  position: absolute; bottom: -28px; left: -36px;
+  background: var(--surface2); border: 1px solid rgba(0,196,106,0.15);
+  border-radius: 12px; padding: 14px 18px;
+  display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  animation: floatAccent 4s ease-in-out infinite; z-index: 2;
+}
+@keyframes floatAccent { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+.accent-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: rgba(0,196,106,0.12); border: 1px solid rgba(0,196,106,0.2);
+  display: flex; align-items: center; justify-content: center;
+}
+.accent-title { font-size: 12px; font-weight: 600; color: var(--white); }
+.accent-desc { font-size: 10.5px; color: var(--muted); margin-top: 1px; font-family: 'DM Mono', monospace; }
+
+/* ─── TICKER ─── */
+.ticker-wrap {
+  background: var(--surface); border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border); padding: 12px 0;
+  overflow: hidden; position: relative; z-index: 1;
+}
+.ticker-inner { display: flex; animation: tickerScroll 30s linear infinite; white-space: nowrap; }
+@keyframes tickerScroll { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+.ticker-item {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 0 32px; font-size: 12px; color: var(--muted);
+  font-family: 'DM Mono', monospace; border-right: 1px solid var(--border);
+}
+.ticker-tag {
+  background: rgba(0,196,106,0.1); border: 1px solid rgba(0,196,106,0.15);
+  color: var(--green); padding: 2px 8px; border-radius: 4px;
+  font-size: 10px; font-weight: 500;
+}
+.ticker-tag.gold { background: rgba(232,184,75,0.08); border-color: rgba(232,184,75,0.15); color: var(--gold); }
+
+/* ─── STATS BAR ─── */
+.stats-bar-wrap {
+  position: relative; z-index: 1; padding: 0 48px;
+  max-width: 1280px; margin: -36px auto 0;
+}
+.stats-bar {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 16px; display: grid; grid-template-columns: repeat(4,1fr);
+  box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+  overflow: hidden;
+}
+.stats-bar-item {
+  padding: 24px 28px; border-right: 1px solid var(--border);
+  transition: background 0.2s;
+}
+.stats-bar-item:last-child { border-right: none; }
+.stats-bar-item:hover { background: rgba(255,255,255,0.02); }
+.sb-val {
+  font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700;
+  color: var(--white); line-height: 1; margin-bottom: 6px;
+}
+.sb-val.green{color:var(--green)} .sb-val.gold{color:var(--gold)} .sb-val.red{color:var(--red)}
+.sb-label { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+.sb-change { font-size: 11px; font-family: 'DM Mono', monospace; }
+.sb-change.up{color:var(--green)} .sb-change.warn{color:var(--gold)} .sb-change.alert{color:var(--red)}
+
+/* ─── SECTION BASE ─── */
+section { position: relative; z-index: 1; }
+.section-inner { max-width: 1280px; margin: 0 auto; padding: 100px 48px; }
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--green); margin-bottom: 16px;
+}
+.section-label::before { content:''; display:block; width:20px; height:1px; background:var(--green); }
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(32px, 4vw, 52px); font-weight: 700;
+  color: var(--white); line-height: 1.15; letter-spacing: -1px; margin-bottom: 16px;
+}
+.section-desc { font-size: 16px; color: var(--muted); max-width: 520px; line-height: 1.7; font-weight: 300; }
+
+/* ─── DASHBOARD SECTION ─── */
+.dashboard-section { background: transparent; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+/* Tabs */
+.tab-bar {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+.tab-btn {
+  padding: 14px 24px; font-size: 13.5px; font-weight: 500;
+  color: var(--muted); background: none; border: none; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: all 0.2s; font-family: 'Outfit', sans-serif;
+  letter-spacing: 0.3px;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--green); border-bottom-color: var(--green); font-weight: 600; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Chart containers */
+.chart-panel {
+  display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start;
+}
+.chart-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px;
+  transition: transform 0.3s ease;
+}
+.chart-card:hover {
+  transform: translateY(-3px);
+}
+.chart-card-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 24px;
+}
+.chart-card-title { font-size: 14px; font-weight: 600; color: var(--white); margin-bottom: 4px; }
+.chart-card-sub { font-size: 11.5px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.chart-canvas-wrap { position: relative; height: 280px; }
+
+.insight-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 24px; height: fit-content;
+  transition: transform 0.3s ease;
+}
+.insight-card:hover {
+  transform: translateY(-3px);
+}
+.insight-card-title {
+  font-size: 13px; font-weight: 600; color: var(--white);
+  margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;
+}
+.insight-tag {
+  font-size: 10px; font-family: 'DM Mono', monospace;
+  background: rgba(0,196,106,0.1); border: 1px solid rgba(0,196,106,0.15);
+  color: var(--green); padding: 2px 8px; border-radius: 4px;
+}
+.insight-highlight {
+  background: rgba(0,196,106,0.06); border: 1px solid rgba(0,196,106,0.12);
+  border-radius: 10px; padding: 14px; margin-bottom: 14px;
+}
+.ih-label { font-size: 10.5px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
+.ih-val { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--green); }
+.ih-desc { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.insight-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.insight-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text); }
+.insight-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* ─── HOW IT WORKS ─── */
+.how-section {}
+.steps-grid {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 0; margin-top: 64px; position: relative;
+}
+.steps-grid::before {
+  content:''; position:absolute; top:30px; left:calc(12.5%);
+  width:calc(75%); height:1px;
+  background:linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+}
+.step-item { padding: 0 24px; transition: transform 0.3s ease; }
+.step-item:hover { transform: translateY(-5px); }
+.step-num-wrap { position:relative; width:60px; height:60px; margin-bottom:28px; }
+.step-num-bg {
+  width:60px; height:60px; border-radius:50%;
+  background:var(--surface); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+}
+.step-num { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; color:var(--white); }
+.step-num-wrap.active .step-num-bg { background:var(--green); border-color:var(--green); box-shadow:0 0 24px rgba(0,196,106,0.35); }
+.step-num-wrap.active .step-num { color:#000; }
+.step-title { font-size:15px; font-weight:600; color:var(--white); margin-bottom:10px; }
+.step-desc { font-size:13px; color:var(--muted); line-height:1.65; }
+
+/* ─── CTA SECTION WITH BACKGROUND ─── */
+.cta-section {
+  text-align: center;
+  position: relative;
+}
+.cta-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: linear-gradient(135deg, rgba(0,196,106,0.1) 0%, rgba(6,9,15,0.95) 100%),
+                    url('https://images.unsplash.com/photo-1552664730-d307ca884978?w=1600&q=80');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  z-index: -1;
+}
+.cta-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 72px 60px;
+  position: relative;
+  overflow: hidden;
+  max-width: 640px;
+  margin: 0 auto;
+  transition: transform 0.3s ease;
+}
+.cta-box:hover {
+  transform: translateY(-3px);
+}
+.cta-box::before {
+  content:''; position:absolute; top:-1px; left:50%; transform:translateX(-50%);
+  width:200px; height:1px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);
+}
+.cta-box::after {
+  content:''; position:absolute; top:-60px; left:50%; transform:translateX(-50%);
+  width:300px; height:300px;
+  background:radial-gradient(circle,rgba(0,196,106,0.06) 0%,transparent 70%);
+  pointer-events:none;
+}
+.cta-tag {
+  display:inline-block; background:rgba(0,196,106,0.08); border:1px solid rgba(0,196,106,0.18);
+  color:var(--green); font-size:11px; font-weight:600; letter-spacing:2px;
+  text-transform:uppercase; padding:6px 14px; border-radius:100px; margin-bottom:24px;
+}
+.cta-title { font-family:'Playfair Display',serif; font-size:40px; font-weight:700; color:var(--white); line-height:1.2; letter-spacing:-1px; margin-bottom:16px; }
+.cta-desc { font-size:15px; color:var(--muted); line-height:1.7; margin-bottom:36px; font-weight:300; }
+.cta-actions { display:flex; justify-content:center; gap:14px; flex-wrap:wrap; }
+
+/* ─── FOOTER ─── */
+footer {
+  border-top:1px solid var(--border); padding:36px 48px;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:16px; position:relative; z-index:1;
+}
+.footer-logo { font-family:'Playfair Display',serif; font-size:18px; font-weight:900; letter-spacing:-0.5px; }
+.footer-logo .s1{color:var(--white)} .footer-logo .s2{color:var(--green)} .footer-logo .s3{color:var(--gold)}
+.footer-copy { font-size:12px; color:var(--muted); }
+.footer-links { display:flex; gap:24px; }
+.footer-links a { font-size:12.5px; color:var(--muted); text-decoration:none; transition:color 0.2s; }
+.footer-links a:hover { color:var(--white); }
+
+/* ─── SCROLL REVEAL ─── */
+.reveal { opacity:0; transform:translateY(30px); transition:opacity 0.7s ease, transform 0.7s ease; }
+.reveal.visible { opacity:1; transform:none; }
+.reveal-delay-1{transition-delay:0.1s} .reveal-delay-2{transition-delay:0.2s}
+.reveal-delay-3{transition-delay:0.3s} .reveal-delay-4{transition-delay:0.4s}
+
+/* ─── COUNTER ANIMATION CLASS ─── */
+.counter-animate {
+  animation: countPop 0.5s ease-out;
+}
+
+@keyframes countPop {
+  0% { opacity: 0.3; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
+
+
+
+
+/* Floating AI Button */
+.floating-ai-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.4);
+    cursor: pointer;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+    padding: 0;
+}
+
+.floating-ai-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.floating-ai-btn:hover {
+    transform: scale(1.1) rotate(-5deg);
+    box-shadow: 0 12px 48px rgba(16, 185, 129, 0.6);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.floating-ai-btn:active {
+    transform: scale(0.95);
+}
+
+/* ===== VIBRATION + ROTATION ANIMATION ===== */
+.floating-ai-btn.vibrate {
+    animation: vibrateRotate 4s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+}
+
+@keyframes vibrateRotate {
+    /* Vibration Phase - First 2 seconds */
+    0% { transform: translateX(0) rotate(0deg); }
+    5% { transform: translateX(-6px) rotate(-8deg); }
+    10% { transform: translateX(6px) rotate(8deg); }
+    15% { transform: translateX(-6px) rotate(-8deg); }
+    20% { transform: translateX(6px) rotate(8deg); }
+    25% { transform: translateX(-4px) rotate(-5deg); }
+    30% { transform: translateX(4px) rotate(5deg); }
+    35% { transform: translateX(-3px) rotate(-3deg); }
+    40% { transform: translateX(3px) rotate(3deg); }
+    45% { transform: translateX(-2px) rotate(-2deg); }
+    50% { transform: translateX(0) rotate(0deg); }
+    
+    /* Rotation Phase - Next 1.5 seconds */
+    55% { transform: translateX(0) rotate(-10deg) scale(1.05); }
+    60% { transform: translateX(0) rotate(10deg) scale(1.08); }
+    65% { transform: translateX(0) rotate(-8deg) scale(1.05); }
+    70% { transform: translateX(0) rotate(8deg) scale(1.02); }
+    75% { transform: translateX(0) rotate(-5deg) scale(1); }
+    80% { transform: translateX(0) rotate(5deg) scale(1); }
+    85% { transform: translateX(0) rotate(-3deg); }
+    90% { transform: translateX(0) rotate(3deg); }
+    95% { transform: translateX(0) rotate(-1deg); }
+    100% { transform: translateX(0) rotate(0deg); }
+}
+
+/* Pulse Ring Animation (increases during vibration) */
+.floating-ai-btn.vibrate::before {
+    animation: pulseRingFast 2s ease-out infinite;
+}
+
+@keyframes pulseRingFast {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(2); opacity: 0; }
+}
+
+.floating-ai-btn.vibrate::after {
+    animation: glowPulseFast 1.5s ease-in-out infinite;
+}
+
+@keyframes glowPulseFast {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.5); opacity: 1; }
+}
+
+/* Regular pulse after animation */
+.floating-ai-btn::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid rgba(16, 185, 129, 0.3);
+    animation: pulseRing 3s ease-out infinite;
+}
+
+@keyframes pulseRing {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+.floating-ai-btn::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.15), transparent 70%);
+    animation: glowPulse 3s ease-in-out infinite;
+    z-index: -1;
+}
+
+@keyframes glowPulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* ===== CHAT TEXT ===== */
+.floating-ai-text {
+    position: absolute;
+    right: 80px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 8px 16px 8px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.floating-ai-text .text-arrow {
+    display: inline-block;
+    animation: textArrow 1.5s ease-in-out infinite;
+}
+
+@keyframes textArrow {
+    0%, 100% { transform: translateX(0); opacity: 0.6; }
+    50% { transform: translateX(5px); opacity: 1; }
+}
+
+.floating-ai-text::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left: 8px solid rgba(15, 23, 42, 0.95);
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+}
+
+.floating-ai-btn:hover .floating-ai-text {
+    opacity: 1;
+    transform: translateY(-50%) translateX(-8px);
+}
+
+/* Badge */
+.floating-ai-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #ef4444;
+    color: white;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: 50%;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    border: 2px solid #030712;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Status indicator */
+.floating-ai-status {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 16px;
+    height: 16px;
+    background: #10b981;
+    border-radius: 50%;
+    border: 2px solid #030712;
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+    .floating-ai-btn {
+        width: 60px;
+        height: 60px;
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .floating-ai-text {
+        display: none;
+    }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <span class="s1">Skill</span><span class="s2">Sync</span><span class="s3">CM</span>
+    <span class="nav-badge">Beta</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#dashboard" class="active">Dashboard</a></li>
+    <li><a href="/skill-gap.html">Skill Gap</a></li>
+    <li><a href="#how">How It Works</a></li>
+  </ul>
+  <div class="nav-right">
+    <button class="btn-ghost-sm">Sign In</button>
+    <button class="btn-nav-cta">Get Started</button>
+  </div>
+</nav>
+
+<!-- HERO WITH BACKGROUND IMAGE -->
+<section class="hero">
+  <div class="hero-background"></div>
+  <div class="hero-glow-green"></div>
+  <div class="hero-glow-gold"></div>
+  <div class="hero-grid">
+    <div class="hero-left">
+      <div class="hero-badge">
+        <div class="hero-badge-dot"></div>
+        <span>AI-Powered Labor Market Intelligence — Cameroon</span>
+      </div>
+      <h1 class="hero-title">
+        The job market<br>
+        <span class="accent">decoded</span> for<br>
+        <span class="accent-gold">Cameroon.</span>
+      </h1>
+      <p class="hero-sub">
+        SkillSync CM analyzes real job postings from Douala, Yaoundé, and Buea —
+        surfacing the skills employers actually want, where opportunity concentrates,
+        and exactly what stands between you and your next role.
+      </p>
+      <div class="hero-actions">
+        <a href="#dashboard" class="btn-primary">
+          Explore Dashboard
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="/cv-analyzer.html" class="btn-outline">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="2" y="1" width="11" height="13" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 5h5M5 8h5M5 11h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Analyze My CV
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item">
+          <div class="stat-val"><span class="counter" data-target="247">0</span><span>+</span></div>
+          <div class="stat-label">Jobs Analyzed</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val"><span class="counter" data-target="5">0</span></div>
+          <div class="stat-label">Cities Covered</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val"><span class="counter" data-target="12">0</span><span>+</span></div>
+          <div class="stat-label">Industry Sectors</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard card -->
+    <div class="hero-visual">
+      <div class="dashboard-card">
+        <div class="card-header">
+          <div class="card-dots">
+            <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          </div>
+          <div style="text-align:right">
+            <div class="card-title">Market Overview</div>
+            <div class="card-sub">Douala · Yaoundé · Buea</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;font-family:'DM Mono',monospace;">Top In-Demand Skills</div>
+          <div class="skill-bars">
+            <div class="skill-row">
+              <div class="skill-meta"><span class="skill-name">Python</span><span class="skill-pct">87%</span></div>
+              <div class="skill-track"><div class="skill-fill" style="width:87%;background:var(--green);animation-delay:0.1s"></div></div>
+            </div>
+            <div class="skill-row">
+              <div class="skill-meta"><span class="skill-name">Communication</span><span class="skill-pct">74%</span></div>
+              <div class="skill-track"><div class="skill-fill" style="width:74%;background:var(--gold);animation-delay:0.2s"></div></div>
+            </div>
+            <div class="skill-row">
+              <div class="skill-meta"><span class="skill-name">SQL / Databases</span><span class="skill-pct">68%</span></div>
+              <div class="skill-track"><div class="skill-fill" style="width:68%;background:var(--blue);animation-delay:0.3s"></div></div>
+            </div>
+            <div class="skill-row">
+              <div class="skill-meta"><span class="skill-name">JavaScript</span><span class="skill-pct">55%</span></div>
+              <div class="skill-track"><div class="skill-fill" style="width:55%;background:var(--purple);animation-delay:0.4s"></div></div>
+            </div>
+          </div>
+          <div class="mini-metrics">
+            <div class="mini-card">
+              <div class="mini-label">Active Listings</div>
+              <div class="mini-val green"><span class="counter" data-target="1240">0</span></div>
+              <div class="mini-change up">+18% this month</div>
+            </div>
+            <div class="mini-card">
+              <div class="mini-label">Avg. Salary</div>
+              <div class="mini-val gold"><span class="counter" data-target="185">0</span>K</div>
+              <div class="mini-change warn">FCFA / Douala</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="float-accent">
+        <div class="accent-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v4M9 12v4M2 9h4M12 9h4" stroke="#00C46A" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div>
+          <div class="accent-title">Skill Gap Detected</div>
+          <div class="accent-desc">Missing: SQL, Cloud Basics</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-inner">
+    <div class="ticker-item"><span class="ticker-tag">Douala</span> Software Engineer — 42 openings</div>
+    <div class="ticker-item"><span class="ticker-tag gold">Yaoundé</span> Data Analyst — 18 openings</div>
+    <div class="ticker-item"><span class="ticker-tag">Buea</span> Cybersecurity Specialist — 11 openings</div>
+    <div class="ticker-item"><span class="ticker-tag gold">Remote</span> UI/UX Designer — 27 openings</div>
+    <div class="ticker-item"><span class="ticker-tag">Douala</span> Network Engineer — 15 openings</div>
+    <div class="ticker-item"><span class="ticker-tag gold">Yaoundé</span> Project Manager — 33 openings</div>
+    <div class="ticker-item"><span class="ticker-tag">Buea</span> Full Stack Developer — 9 openings</div>
+    <div class="ticker-item"><span class="ticker-tag gold">Douala</span> Financial Analyst — 22 openings</div>
+    <div class="ticker-item"><span class="ticker-tag">Douala</span> Software Engineer — 42 openings</div>
+    <div class="ticker-item"><span class="ticker-tag gold">Yaoundé</span> Data Analyst — 18 openings</div>
+    <div class="ticker-item"><span class="ticker-tag">Buea</span> Cybersecurity Specialist — 11 openings</div>
+    <div class="ticker-item"><span class="ticker-tag gold">Remote</span> UI/UX Designer — 27 openings</div>
+    <div class="ticker-item"><span class="ticker-tag">Douala</span> Network Engineer — 15 openings</div>
+    <div class="ticker-item"><span class="ticker-tag gold">Yaoundé</span> Project Manager — 33 openings</div>
+    <div class="ticker-item"><span class="ticker-tag">Buea</span> Full Stack Developer — 9 openings</div>
+    <div class="ticker-item"><span class="ticker-tag gold">Douala</span> Financial Analyst — 22 openings</div>
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar-wrap">
+  <div class="stats-bar reveal">
+    <div class="stats-bar-item">
+      <div class="sb-val green"><span class="counter" data-target="247">0</span></div>
+      <div class="sb-label">Jobs Analyzed</div>
+      <div class="sb-change up">+12% this month</div>
+    </div>
+    <div class="stats-bar-item">
+      <div class="sb-val"><span class="counter" data-target="5">0</span></div>
+      <div class="sb-label">Active Cities</div>
+      <div class="sb-change" style="color:var(--muted)">Douala, Yaoundé, Buea...</div>
+    </div>
+    <div class="stats-bar-item">
+      <div class="sb-val gold"><span class="counter" data-target="32">0</span></div>
+      <div class="sb-label">Top Skills Identified</div>
+      <div class="sb-change warn">Across 8 industries</div>
+    </div>
+    <div class="stats-bar-item">
+      <div class="sb-val red"><span class="counter" data-target="18">0</span></div>
+      <div class="sb-label">Fraud Alerts Issued</div>
+      <div class="sb-change alert">Scam protection active</div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD SECTION -->
+<section class="dashboard-section" id="dashboard" style="padding-top:80px">
+  <div class="section-inner" style="padding-top:60px">
+    <div class="reveal">
+      <div class="section-label">Market Intelligence</div>
+      <h2 class="section-title">Cameroon's job market,<br>in real time.</h2>
+      <p class="section-desc" style="margin-bottom:48px">Real data collected from verified postings across Cameroon's top employment hubs.</p>
+    </div>
+
+    <div class="tab-bar reveal reveal-delay-1">
+      <button class="tab-btn active" data-tab="skills">In-Demand Skills</button>
+      <button class="tab-btn" data-tab="cities">Jobs by City</button>
+      <button class="tab-btn" data-tab="industries">Top Industries</button>
+    </div>
+
+    <!-- Tab: Skills -->
+    <div class="tab-content active" id="tab-skills">
+      <div class="chart-panel reveal">
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div>
+              <div class="chart-card-title">Most Requested Skills — Douala &amp; Yaoundé</div>
+              <div class="chart-card-sub">150+ job postings · Jan–Mar 2025</div>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="skillsChart"></canvas>
+          </div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-card-title">
+            Skill Insight <span class="insight-tag">Live</span>
+          </div>
+          <div class="insight-highlight">
+            <div class="ih-label">Fastest Growing</div>
+            <div class="ih-val">+35%</div>
+            <div class="ih-desc">Python demand up vs. last quarter. Cybersecurity following closely.</div>
+          </div>
+          <div class="insight-list">
+            <div class="insight-item"><div class="insight-dot" style="background:var(--green)"></div>Python leads across tech &amp; finance roles</div>
+            <div class="insight-item"><div class="insight-dot" style="background:var(--gold)"></div>Excel required in 92% of admin listings</div>
+            <div class="insight-item"><div class="insight-dot" style="background:var(--blue)"></div>Digital marketing demand surged in Douala</div>
+            <div class="insight-item"><div class="insight-dot" style="background:var(--purple)"></div>Communication skills listed in 78% of all postings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Cities -->
+    <div class="tab-content" id="tab-cities">
+      <div class="chart-panel reveal">
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div>
+              <div class="chart-card-title">Job Distribution by City</div>
+              <div class="chart-card-sub">All sectors · 247 listings</div>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="citiesChart"></canvas>
+          </div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-card-title">Regional Insight <span class="insight-tag">Live</span></div>
+          <div class="insight-highlight">
+            <div class="ih-label">Dominant Hub</div>
+            <div class="ih-val">Douala</div>
+            <div class="ih-desc">58% of all tech sector jobs concentrated in Douala's economic zone.</div>
+          </div>
+          <div class="insight-list">
+            <div class="insight-item"><div class="insight-dot" style="background:var(--green)"></div>Yaoundé leads NGO &amp; government roles</div>
+            <div class="insight-item"><div class="insight-dot" style="background:var(--gold)"></div>Buea emerging as startup &amp; remote hub</div>
+            <div class="insight-item"><div class="insight-dot" style="background:var(--blue)"></div>Bamenda growing in construction &amp; trade</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Industries -->
+    <div class="tab-content" id="tab-industries">
+      <div class="chart-panel reveal">
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div>
+              <div class="chart-card-title">Hiring by Industry</div>
+              <div class="chart-card-sub">Percentage of total postings</div>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas id="industriesChart"></canvas>
+          </div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-card-title">Top Sector <span class="insight-tag">Live</span></div>
+          <div class="insight-highlight">
+            <div class="ih-label">Leading Industry</div>
+            <div class="ih-val" style="color:var(--purple)">Technology</div>
+            <div class="ih-desc">31% of all analyzed postings — highest share of any sector in 2025.</div>
+          </div>
+          <div class="insight-list">
+            <div class="insight-item"><div class="insight-dot" style="background:var(--gold)"></div>Finance sector hiring accelerated (+22%)</div>
+            <div class="insight-item"><div class="insight-dot" style="background:var(--blue)"></div>Healthcare showing consistent demand</div>
+            <div class="insight-item"><div class="insight-dot" style="background:var(--red)"></div>Construction rebounding post-pandemic</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-inner">
+    <div style="text-align:center">
+      <div class="section-label reveal" style="justify-content:center">Process</div>
+      <h2 class="section-title reveal reveal-delay-1" style="text-align:center">How SkillSync CM works.</h2>
+      <p class="section-desc reveal reveal-delay-2" style="margin:12px auto 0;text-align:center">From raw job data to actionable career intelligence in four stages.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-item reveal">
+        <div class="step-num-wrap active"><div class="step-num-bg"><span class="step-num">1</span></div></div>
+        <div class="step-title">Data Collection</div>
+        <div class="step-desc">Real job postings gathered from Cameroonian boards, LinkedIn, and company pages — titles, skills, locations, and salaries extracted.</div>
+      </div>
+      <div class="step-item reveal reveal-delay-1">
+        <div class="step-num-wrap"><div class="step-num-bg"><span class="step-num">2</span></div></div>
+        <div class="step-title">Processing and Cleaning</div>
+        <div class="step-desc">Raw data normalized, duplicates removed, suspicious listings flagged, and skills extracted into structured categories.</div>
+      </div>
+      <div class="step-item reveal reveal-delay-2">
+        <div class="step-num-wrap"><div class="step-num-bg"><span class="step-num">3</span></div></div>
+        <div class="step-title">Intelligence Generation</div>
+        <div class="step-desc">Algorithms surface trends, rank skills by demand frequency, map regional concentrations, and generate market insights.</div>
+      </div>
+      <div class="step-item reveal reveal-delay-3">
+        <div class="step-num-wrap"><div class="step-num-bg"><span class="step-num">4</span></div></div>
+        <div class="step-title">Personalized Guidance</div>
+        <div class="step-desc">Submit your CV, compare your skills to the market, and receive precise guidance on exactly where to focus your growth.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA SECTION -->
+<section class="cta-section">
+  <div class="cta-background"></div>
+  <div class="section-inner">
+    <div class="cta-box reveal">
+      <div class="cta-tag">Get Started</div>
+      <h2 class="cta-title">Stop guessing.<br>Start knowing.</h2>
+      <p class="cta-desc">Every month spent applying without market intelligence is a month lost. SkillSync CM gives you the clarity to move with precision.</p>
+      <div class="cta-actions">
+        <a href="#dashboard" class="btn-primary">
+          Open Dashboard
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a href="/skill-gap.html" class="btn-outline">Analyze My Skills</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo"><span class="s1">Skill</span><span class="s2">Sync</span><span class="s3"> CM</span></div>
+  <div class="footer-copy">Where Talent Meets Opportunity — Cameroon © 2025</div>
+  <div class="footer-links">
+    <a href="#dashboard">Dashboard</a>
+    <a href="/skill-gap.html">Skill Analyzer</a>
+    <a href="#">About</a>
+  </div>
+</footer>
+
+<script>
+// ─── CHART.JS SETUP ───
+Chart.defaults.color = '#5A7080';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+Chart.defaults.font.family = "'Outfit', sans-serif";
+
+// Skills Bar Chart
+const skillsCtx = document.getElementById('skillsChart').getContext('2d');
+new Chart(skillsCtx, {
+  type: 'bar',
+  data: {
+    labels: ['Python','Excel','Communication','JavaScript','Proj. Mgmt','Digital Mktg','SQL','Networking'],
+    datasets: [{
+      label: 'Jobs Requiring Skill (%)',
+      data: [87, 92, 78, 65, 54, 71, 68, 41],
+      backgroundColor: ['#00C46A','#E8B84B','#5C9EE8','#A05CE8','#00C4B0','#E85C9E','#5C9EE8','#E8B84B'],
+      borderRadius: 6, barPercentage: 0.65
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0C1220', padding: 12, titleFont: { size: 13 }, bodyFont: { size: 12 } } },
+    scales: {
+      y: { beginAtZero: true, max: 100, ticks: { callback: v => v+'%' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+      x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+    }
+  }
+});
+
+// Cities Pie Chart
+const citiesCtx = document.getElementById('citiesChart').getContext('2d');
+new Chart(citiesCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Douala','Yaoundé','Buea','Bamenda','Other'],
+    datasets: [{
+      data: [58, 24, 10, 5, 3],
+      backgroundColor: ['#00C46A','#E8B84B','#5C9EE8','#A05CE8','#444F60'],
+      borderWidth: 0, hoverOffset: 8
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '65%',
+    plugins: { legend: { position: 'bottom', labels: { padding: 16, font: { size: 12 } } }, tooltip: { backgroundColor: '#0C1220', padding: 12 } }
+  }
+});
+
+// Industries Horizontal Bar
+const industriesCtx = document.getElementById('industriesChart').getContext('2d');
+new Chart(industriesCtx, {
+  type: 'bar',
+  data: {
+    labels: ['Technology','Finance','Construction','Education','Healthcare','NGO / INGO'],
+    datasets: [{
+      label: '% of Postings',
+      data: [31, 18, 14, 11, 9, 17],
+      backgroundColor: '#00C46A', borderRadius: 4, barPercentage: 0.6
+    }]
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0C1220', padding: 12 } },
+    scales: {
+      x: { max: 40, ticks: { callback: v => v+'%' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// ─── TABS ───
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+  });
+});
+
+// ─── NUMBER COUNTER ANIMATION ───
+function animateNumber(element, target, duration = 1500) {
+  let start = 0;
+  const increment = target / (duration / 16);
+  const timer = setInterval(() => {
+    start += increment;
+    if (start >= target) {
+      element.textContent = Math.floor(target);
+      clearInterval(timer);
+      element.classList.add('counter-animate');
+      setTimeout(() => element.classList.remove('counter-animate'), 500);
+    } else {
+      element.textContent = Math.floor(start);
+    }
+  }, 16);
+}
+
+// Intersection Observer for counters
+const counterObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const counter = entry.target;
+      const target = parseInt(counter.getAttribute('data-target'));
+      if (!isNaN(target) && counter.textContent == '0') {
+        animateNumber(counter, target);
+      }
+      counterObserver.unobserve(counter);
+    }
+  });
+}, { threshold: 0.5, rootMargin: '0px' });
+
+// Observe all counter elements
+document.querySelectorAll('.counter').forEach(counter => {
+  counterObserver.observe(counter);
+});
+
+// ─── SCROLL REVEAL ───
+const revealObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObserver.unobserve(e.target); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+setTimeout(() => document.querySelectorAll('.hero .reveal').forEach(el => el.classList.add('visible')), 100);
+</script>
+
+
+
+<!-- Floating AI Button -->
+<div class="floating-ai-btn" id="floatingAIBtn" onclick="window.location.href='ai-chat.html'" title="Chat with AI">
+    <img src="LOGO.jpg" alt="SkillSync AI Assistant">
+    <span class="floating-ai-text">
+        <span>🤖 Chat with AI</span>
+        <span class="text-arrow">→</span>
+    </span>
+    <span class="floating-ai-badge">AI</span>
+    <span class="floating-ai-status"></span>
+</div>
+
+<script>
+    // Trigger vibration animation on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const aiBtn = document.getElementById('floatingAIBtn');
+        
+        // Hide on AI page
+        if (window.location.pathname.includes('ai-chat.html')) {
+            aiBtn.style.display = 'none';
+            return;
+        }
+        
+        // Add vibrate class to start animation
+        aiBtn.classList.add('vibrate');
+        
+        // Remove vibration class after 4 seconds (when animation ends)
+        setTimeout(function() {
+            aiBtn.classList.remove('vibrate');
+        }, 4000);
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillSync CM — Skill Gap Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#06090F;--s1:#0C1220;--s2:#111827;--s3:#0a1628;
+  --b0:rgba(255,255,255,0.04);--b1:rgba(255,255,255,0.07);--b2:rgba(255,255,255,0.12);
+  --green:#00C46A;--green-lo:rgba(0,196,106,0.08);--green-mid:rgba(0,196,106,0.18);
+  --gold:#E8B84B;--gold-lo:rgba(232,184,75,0.08);
+  --red:#E85C5C;--red-lo:rgba(232,92,92,0.08);
+  --blue:#5C9EE8;--blue-lo:rgba(92,158,232,0.08);
+  --purple:#A05CE8;--white:#F0F4F8;--text:#C8D8E4;--muted:#5A7080;--r:12px;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Outfit',sans-serif;font-weight:400;
+  line-height:1.6;overflow-x:hidden;min-height:100vh;
+}
+
+/* ─── AMBIENT BACKGROUND ─── */
+.bg-ambient{
+  position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;
+}
+.bg-ambient::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 900px 600px at 85% -5%, rgba(0,196,106,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 700px 500px at -5% 85%, rgba(232,184,75,0.05) 0%, transparent 55%),
+    radial-gradient(ellipse 500px 400px at 50% 110%, rgba(92,158,232,0.04) 0%, transparent 60%);
+}
+/* Floating orbs */
+.bg-orb{
+  position:absolute;border-radius:50%;
+  filter:blur(80px);pointer-events:none;
+}
+.bg-orb-1{
+  width:340px;height:340px;
+  background:rgba(0,196,106,0.04);
+  top:15%;right:8%;
+  animation:orbFloat1 18s ease-in-out infinite;
+}
+.bg-orb-2{
+  width:260px;height:260px;
+  background:rgba(232,184,75,0.035);
+  bottom:20%;left:5%;
+  animation:orbFloat2 22s ease-in-out infinite;
+}
+.bg-orb-3{
+  width:200px;height:200px;
+  background:rgba(92,158,232,0.03);
+  top:55%;right:30%;
+  animation:orbFloat3 15s ease-in-out infinite;
+}
+@keyframes orbFloat1{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-30px,25px) scale(1.05)}66%{transform:translate(20px,-15px) scale(0.95)}}
+@keyframes orbFloat2{0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(20px,-30px) scale(1.08)}70%{transform:translate(-15px,20px) scale(0.97)}}
+@keyframes orbFloat3{0%,100%{transform:translate(0,0)}50%{transform:translate(15px,-20px)}}
+
+/* ─── PEOPLE ILLUSTRATIONS ─── */
+.bg-people{
+  position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;
+}
+.person-fig{position:absolute;opacity:0;transition:opacity 1.5s ease;}
+.person-fig.visible{opacity:1}
+.person-fig svg{display:block}
+
+/* Figure positions */
+.fig-tl{top:120px;left:-20px;transform:scaleX(-1)}
+.fig-tr{top:90px;right:-10px;}
+.fig-bl{bottom:60px;left:30px;}
+.fig-br{bottom:40px;right:20px;transform:scaleX(-1)}
+
+/* Subtle animation for figures */
+.fig-tl{animation:figBreath 8s ease-in-out infinite 1s}
+.fig-tr{animation:figBreath 10s ease-in-out infinite 2.5s}
+.fig-bl{animation:figBreath 9s ease-in-out infinite 0.5s}
+.fig-br{animation:figBreath 11s ease-in-out infinite 1.8s}
+@keyframes figBreath{0%,100%{transform:scaleX(-1) translateY(0)}50%{transform:scaleX(-1) translateY(-6px)}}
+.fig-tr{animation:figBreathN 10s ease-in-out infinite 2.5s}
+.fig-bl{animation:figBreathN 9s ease-in-out infinite 0.5s}
+@keyframes figBreathN{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+/* Stat chips floating near figures */
+.stat-chip{
+  position:absolute;
+  background:rgba(12,18,32,0.92);
+  border:1px solid rgba(0,196,106,0.2);
+  border-radius:100px;
+  padding:6px 14px;
+  font-size:11px;font-weight:600;
+  color:var(--green);
+  font-family:'DM Mono',monospace;
+  letter-spacing:0.5px;
+  backdrop-filter:blur(12px);
+  white-space:nowrap;
+  opacity:0;
+  animation:chipPop 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+.stat-chip.gold{color:var(--gold);border-color:rgba(232,184,75,0.2)}
+.stat-chip.blue{color:var(--blue);border-color:rgba(92,158,232,0.2)}
+
+/* Grid lines background texture */
+.bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+}
+
+/* ─── NAV ─── */
+nav{
+  position:sticky;top:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 48px;height:64px;
+  background:rgba(6,9,15,0.92);backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--b1);
+}
+.nav-logo{
+  display:flex;align-items:baseline;gap:1px;
+  font-family:'Playfair Display',serif;font-weight:900;font-size:20px;
+  text-decoration:none;letter-spacing:-0.5px;
+}
+.nl1{color:var(--white)}.nl2{color:var(--green)}.nl3{color:var(--gold);font-size:16px;margin-left:4px}
+.nav-back{
+  display:flex;align-items:center;gap:8px;
+  font-size:13px;color:var(--muted);text-decoration:none;
+  transition:color 0.2s;padding:8px 0;
+}
+.nav-back:hover{color:var(--white)}
+.nav-back svg{transition:transform 0.2s}
+.nav-back:hover svg{transform:translateX(-3px)}
+
+/* ─── PAGE HEADER ANIMATIONS ─── */
+.page-header{
+  position:relative;z-index:1;
+  padding:72px 48px 0;max-width:1400px;margin:0 auto;
+}
+.page-header-inner{
+  display:grid;grid-template-columns:1fr 480px;gap:48px;align-items:end;
+  padding-bottom:48px;border-bottom:1px solid var(--b1);
+}
+
+/* Hero entrance animations */
+.ph-label{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:600;letter-spacing:2.5px;
+  text-transform:uppercase;color:var(--green);margin-bottom:16px;
+  animation:slideInLeft 0.7s cubic-bezier(0.16,1,0.3,1) both;
+  animation-delay:0.1s;
+}
+.ph-label::before{content:'';display:block;width:20px;height:1px;background:var(--green)}
+.ph-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(36px,4.5vw,62px);font-weight:900;
+  color:var(--white);line-height:1.08;letter-spacing:-2px;
+  margin-bottom:16px;
+  animation:slideInLeft 0.8s cubic-bezier(0.16,1,0.3,1) both;
+  animation-delay:0.2s;
+}
+.ph-title .acc{color:var(--green)}
+.ph-desc{
+  font-size:16px;color:var(--muted);line-height:1.75;font-weight:300;max-width:500px;
+  animation:slideInLeft 0.8s cubic-bezier(0.16,1,0.3,1) both;
+  animation-delay:0.35s;
+}
+.ph-stats{
+  display:flex;gap:32px;
+  animation:slideInRight 0.9s cubic-bezier(0.16,1,0.3,1) both;
+  animation-delay:0.4s;
+}
+.phs-item{}
+.phs-val{
+  font-family:'Playfair Display',serif;font-size:32px;
+  font-weight:700;color:var(--white);line-height:1;margin-bottom:4px;
+}
+.phs-val span{color:var(--green)}
+.phs-label{font-size:12px;color:var(--muted);letter-spacing:0.5px}
+
+/* ─── STAT CARDS STRIP ─── */
+.stat-strip{
+  display:flex;gap:12px;padding:28px 0 0;
+  animation:fadeUp 0.8s cubic-bezier(0.16,1,0.3,1) both;
+  animation-delay:0.55s;
+}
+.stat-strip-card{
+  flex:1;background:var(--b0);border:1px solid var(--b1);
+  border-radius:10px;padding:16px 20px;
+  display:flex;align-items:center;gap:14px;
+  transition:border-color 0.2s,background 0.2s;
+}
+.stat-strip-card:hover{background:var(--b1);border-color:var(--b2)}
+.ssc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ssc-val{font-size:20px;font-weight:700;font-family:'Playfair Display',serif;color:var(--white);line-height:1}
+.ssc-label{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* Animated counter */
+@keyframes countUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── MAIN LAYOUT ─── */
+.main{
+  max-width:1400px;margin:0 auto;
+  padding:48px 48px 80px;
+  display:grid;grid-template-columns:380px 1fr;
+  gap:32px;position:relative;z-index:1;
+}
+
+/* Left panel entrance */
+.left-panel{
+  display:flex;flex-direction:column;gap:20px;
+  animation:slideInLeft 0.9s cubic-bezier(0.16,1,0.3,1) both;
+  animation-delay:0.5s;
+}
+
+.panel{
+  background:var(--s1);border:1px solid var(--b1);
+  border-radius:16px;padding:28px;
+}
+.panel-title{
+  font-size:11px;font-weight:600;letter-spacing:2px;
+  text-transform:uppercase;color:var(--muted);
+  margin-bottom:20px;font-family:'DM Mono',monospace;
+  display:flex;align-items:center;gap:8px;
+}
+.panel-title::before{content:'';width:14px;height:1px;background:var(--muted)}
+
+/* Role selector */
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:0}
+.role-card{
+  background:var(--b0);border:1px solid var(--b1);
+  border-radius:10px;padding:12px 14px;cursor:pointer;
+  transition:all 0.2s;position:relative;overflow:hidden;
+}
+.role-card:hover{background:var(--b1);border-color:var(--b2)}
+.role-card.selected{background:var(--green-lo);border-color:var(--green-mid)}
+.role-card.selected .rc-name{color:var(--white)}
+.rc-track{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-family:'DM Mono',monospace}
+.rc-name{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
+.rc-count{position:absolute;top:10px;right:10px;font-size:9px;color:var(--muted);font-family:'DM Mono',monospace}
+.role-card.selected .rc-count{color:var(--green)}
+.role-search{
+  width:100%;background:var(--b0);border:1px solid var(--b1);
+  border-radius:8px;padding:10px 14px;color:var(--white);
+  font-family:'Outfit',sans-serif;font-size:13px;
+  outline:none;transition:border-color 0.2s;margin-bottom:16px;
+}
+.role-search:focus{border-color:rgba(0,196,106,0.3)}
+.role-search::placeholder{color:var(--muted)}
+
+/* Skill input */
+.skill-input-wrap{position:relative}
+.skill-input{
+  width:100%;background:var(--bg);border:1px solid var(--b2);
+  border-radius:8px;padding:14px 16px;color:var(--white);
+  font-family:'DM Mono',monospace;font-size:12.5px;
+  outline:none;resize:none;height:120px;
+  transition:border-color 0.2s;line-height:1.8;
+}
+.skill-input:focus{border-color:rgba(0,196,106,0.4)}
+.skill-input::placeholder{color:var(--muted);font-family:'Outfit',sans-serif;font-size:13px}
+.skill-hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6}
+.skill-pills{display:flex;flex-wrap:wrap;gap:6px;min-height:32px;margin-top:12px}
+.skill-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(0,196,106,0.1);border:1px solid rgba(0,196,106,0.2);
+  color:var(--green);font-size:11px;font-weight:500;
+  padding:4px 10px;border-radius:100px;
+  font-family:'DM Mono',monospace;animation:pillIn 0.25s ease;
+}
+@keyframes pillIn{from{opacity:0;transform:scale(0.8)}to{opacity:1;transform:scale(1)}}
+.pill-remove{cursor:pointer;opacity:0.6;transition:opacity 0.15s;line-height:1;font-size:13px;color:var(--green);background:none;border:none}
+.pill-remove:hover{opacity:1}
+.quick-skills{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.qs-btn{
+  font-size:11px;color:var(--muted);background:var(--b0);
+  border:1px solid var(--b1);border-radius:100px;
+  padding:3px 10px;cursor:pointer;transition:all 0.15s;
+  font-family:'DM Mono',monospace;
+}
+.qs-btn:hover{color:var(--green);border-color:var(--green-mid);background:var(--green-lo)}
+
+.btn-analyze{
+  width:100%;background:var(--green);color:#000;
+  border:none;border-radius:10px;padding:15px;
+  font-size:15px;font-weight:700;cursor:pointer;
+  transition:all 0.25s;font-family:'Outfit',sans-serif;
+  letter-spacing:0.3px;margin-top:4px;
+  position:relative;overflow:hidden;
+}
+.btn-analyze::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);
+  transform:translateX(-100%);transition:transform 0.5s;
+}
+.btn-analyze:hover::before{transform:translateX(100%)}
+.btn-analyze:hover{background:#00d474;transform:translateY(-2px);box-shadow:0 12px 32px rgba(0,196,106,0.3)}
+.btn-analyze:disabled{background:var(--s2);color:var(--muted);cursor:not-allowed;transform:none;box-shadow:none}
+.btn-analyze:disabled::before{display:none}
+.btn-analyze.loading{background:var(--s2);color:var(--muted);cursor:not-allowed;pointer-events:none}
+.btn-analyze.loading .btn-text{display:none}
+.btn-analyze.loading .btn-loading{display:flex}
+.btn-loading{display:none;align-items:center;justify-content:center;gap:10px}
+.spinner{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);border-top-color:var(--text);animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ─── RIGHT PANEL ─── */
+.right-panel{
+  display:flex;flex-direction:column;gap:24px;
+  animation:slideInRight 0.9s cubic-bezier(0.16,1,0.3,1) both;
+  animation-delay:0.6s;
+}
+
+/* ─── EMPTY STATE ─── */
+.empty-state{
+  background:var(--s1);border:1px solid var(--b1);
+  border-radius:16px;padding:80px 40px;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;gap:16px;
+  min-height:400px;
+  position:relative;overflow:hidden;
+}
+/* Decorative accent line */
+.empty-state::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,196,106,0.3),transparent);
+}
+
+/* Floating tag clouds in empty state */
+.es-float-tags{
+  position:absolute;inset:0;pointer-events:none;overflow:hidden;
+}
+.es-ftag{
+  position:absolute;font-size:10px;font-family:'DM Mono',monospace;
+  color:rgba(255,255,255,0.04);white-space:nowrap;
+  animation:ftag linear infinite;
+}
+@keyframes ftag{0%{opacity:0;transform:translateY(20px)}10%{opacity:1}90%{opacity:1}100%{opacity:0;transform:translateY(-20px)}}
+
+/* Icon with pulse ring */
+.es-icon-wrap{position:relative;margin-bottom:8px}
+.es-icon-pulse{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:90px;height:90px;border-radius:50%;
+  border:1px solid rgba(0,196,106,0.15);
+  animation:pulsRing 2.5s ease-out infinite;
+}
+.es-icon-pulse2{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:110px;height:110px;border-radius:50%;
+  border:1px solid rgba(0,196,106,0.08);
+  animation:pulsRing 2.5s ease-out infinite 0.8s;
+}
+@keyframes pulsRing{0%{transform:translate(-50%,-50%) scale(0.8);opacity:1}100%{transform:translate(-50%,-50%) scale(1.4);opacity:0}}
+.es-icon{
+  width:72px;height:72px;border-radius:50%;
+  background:var(--b0);border:1px solid var(--b1);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;z-index:1;
+}
+.es-title{
+  font-family:'Playfair Display',serif;
+  font-size:24px;font-weight:700;color:var(--white);margin-bottom:8px;
+}
+.es-desc{font-size:14px;color:var(--muted);max-width:360px;line-height:1.7}
+.es-steps{display:flex;flex-direction:column;gap:10px;margin-top:16px;text-align:left;width:100%;max-width:300px}
+.es-step{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted)}
+.es-step-num{
+  width:24px;height:24px;border-radius:50%;
+  background:var(--b1);border:1px solid var(--b2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;color:var(--text);flex-shrink:0;
+  font-family:'DM Mono',monospace;
+}
+
+/* ─── RESULTS ─── */
+.results{display:none;flex-direction:column;gap:24px}
+.results.visible{display:flex}
+.score-row{display:grid;grid-template-columns:220px 1fr 1fr 1fr;gap:16px}
+.score-main{
+  background:var(--s1);border:1px solid var(--b1);
+  border-radius:16px;padding:28px;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;
+  position:relative;overflow:hidden;
+}
+.score-main::before{
+  content:'';position:absolute;top:-40px;left:50%;transform:translateX(-50%);
+  width:160px;height:160px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,196,106,0.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+.score-ring-wrap{position:relative;width:120px;height:120px;margin-bottom:16px}
+.score-ring-wrap canvas{position:absolute;top:0;left:0}
+.score-ring-val{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.srv-num{font-family:'Playfair Display',serif;font-size:32px;font-weight:900;color:var(--white);line-height:1}
+.srv-denom{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.score-label{font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px}
+.score-sub{font-size:12px;color:var(--muted);line-height:1.5}
+.score-metric{background:var(--s1);border:1px solid var(--b1);border-radius:16px;padding:24px;display:flex;flex-direction:column;justify-content:space-between}
+.sm-label{font-size:10.5px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;font-family:'DM Mono',monospace}
+.sm-val{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;line-height:1;color:var(--white);margin-bottom:6px}
+.sm-val.green{color:var(--green)}.sm-val.red{color:var(--red)}.sm-val.gold{color:var(--gold)}
+.sm-bar-track{height:4px;background:var(--b0);border-radius:100px;overflow:hidden;margin-top:12px}
+.sm-bar-fill{height:100%;border-radius:100px;transition:width 1.2s cubic-bezier(0.16,1,0.3,1);width:0%}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.chart-card{background:var(--s1);border:1px solid var(--b1);border-radius:16px;padding:28px}
+.cc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
+.cc-title{font-size:14px;font-weight:600;color:var(--white);margin-bottom:4px}
+.cc-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.chart-wrap{position:relative}
+.chart-wrap.radar{height:280px}
+.chart-wrap.bars{height:320px}
+.skills-breakdown{background:var(--s1);border:1px solid var(--b1);border-radius:16px;padding:28px}
+.sb-tabs{display:flex;gap:0;border-bottom:1px solid var(--b1);margin-bottom:24px}
+.sb-tab{padding:10px 20px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.2s;font-family:'Outfit',sans-serif}
+.sb-tab:hover{color:var(--text)}
+.sb-tab.active{color:var(--green);border-bottom-color:var(--green);font-weight:600}
+.sb-content{display:none}
+.sb-content.active{display:block}
+.skills-grid{display:flex;flex-wrap:wrap;gap:8px}
+.sk-tag{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:100px;font-size:12.5px;font-weight:500;font-family:'DM Mono',monospace;animation:tagIn 0.4s ease both;cursor:default;transition:transform 0.15s}
+.sk-tag:hover{transform:translateY(-1px)}
+@keyframes tagIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.sk-tag.have{background:rgba(0,196,106,0.1);border:1px solid rgba(0,196,106,0.2);color:var(--green)}
+.sk-tag.miss{background:rgba(232,92,92,0.08);border:1px solid rgba(232,92,92,0.18);color:var(--red)}
+.sk-tag.partial{background:rgba(232,184,75,0.08);border:1px solid rgba(232,184,75,0.18);color:var(--gold)}
+.sk-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.roadmap{background:var(--s1);border:1px solid var(--b1);border-radius:16px;padding:28px}
+.rm-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--white);margin-bottom:6px}
+.rm-desc{font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.6}
+.rm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.rm-phase{background:var(--bg);border:1px solid var(--b1);border-radius:12px;padding:20px;position:relative;overflow:hidden}
+.rm-phase::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.rm-phase.p1::before{background:var(--red)}
+.rm-phase.p2::before{background:var(--gold)}
+.rm-phase.p3::before{background:var(--green)}
+.rmp-num{font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;font-family:'DM Mono',monospace;margin-bottom:10px}
+.p1 .rmp-num{color:var(--red)}.p2 .rmp-num{color:var(--gold)}.p3 .rmp-num{color:var(--green)}
+.rmp-title{font-size:14px;font-weight:600;color:var(--white);margin-bottom:12px}
+.rmp-skills{display:flex;flex-direction:column;gap:8px}
+.rmp-skill{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--text);padding:8px 12px;background:var(--b0);border-radius:6px}
+.rmp-importance{font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:4px;font-weight:500}
+.p1 .rmp-importance{background:rgba(232,92,92,0.1);color:var(--red)}
+.p2 .rmp-importance{background:rgba(232,184,75,0.1);color:var(--gold)}
+.p3 .rmp-importance{background:rgba(0,196,106,0.1);color:var(--green)}
+.match-detail{background:var(--s1);border:1px solid var(--b1);border-radius:16px;padding:28px}
+.md-chart-wrap{height:340px;position:relative}
+.verdict{border-radius:12px;padding:20px 24px;display:flex;align-items:center;gap:16px;border:1px solid}
+.verdict.strong{background:rgba(0,196,106,0.06);border-color:rgba(0,196,106,0.2)}
+.verdict.moderate{background:rgba(232,184,75,0.06);border-color:rgba(232,184,75,0.2)}
+.verdict.weak{background:rgba(232,92,92,0.06);border-color:rgba(232,92,92,0.2)}
+.verdict-icon{width:44px;height:44px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.verdict.strong .verdict-icon{background:rgba(0,196,106,0.12)}
+.verdict.moderate .verdict-icon{background:rgba(232,184,75,0.12)}
+.verdict.weak .verdict-icon{background:rgba(232,92,92,0.12)}
+.verdict-title{font-size:15px;font-weight:600;color:var(--white);margin-bottom:4px}
+.verdict-desc{font-size:13px;color:var(--muted);line-height:1.5}
+.fade-in{animation:fadeIn 0.5s ease both}
+.fade-in-up{animation:fadeInUp 0.6s ease both}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* New entrance keyframes */
+@keyframes slideInLeft{from{opacity:0;transform:translateX(-32px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideInRight{from{opacity:0;transform:translateX(32px)}to{opacity:1;transform:translateX(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes chipPop{from{opacity:0;transform:scale(0.7) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
+
+@media(max-width:1100px){
+  .main{grid-template-columns:1fr}
+  .left-panel{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .page-header-inner{grid-template-columns:1fr}
+  .bg-people{display:none}
+}
+
+
+
+
+
+/* Floating AI Button */
+.floating-ai-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.4);
+    cursor: pointer;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+    padding: 0;
+}
+
+.floating-ai-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.floating-ai-btn:hover {
+    transform: scale(1.1) rotate(-5deg);
+    box-shadow: 0 12px 48px rgba(16, 185, 129, 0.6);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.floating-ai-btn:active {
+    transform: scale(0.95);
+}
+
+/* ===== VIBRATION + ROTATION ANIMATION ===== */
+.floating-ai-btn.vibrate {
+    animation: vibrateRotate 4s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+}
+
+@keyframes vibrateRotate {
+    /* Vibration Phase - First 2 seconds */
+    0% { transform: translateX(0) rotate(0deg); }
+    5% { transform: translateX(-6px) rotate(-8deg); }
+    10% { transform: translateX(6px) rotate(8deg); }
+    15% { transform: translateX(-6px) rotate(-8deg); }
+    20% { transform: translateX(6px) rotate(8deg); }
+    25% { transform: translateX(-4px) rotate(-5deg); }
+    30% { transform: translateX(4px) rotate(5deg); }
+    35% { transform: translateX(-3px) rotate(-3deg); }
+    40% { transform: translateX(3px) rotate(3deg); }
+    45% { transform: translateX(-2px) rotate(-2deg); }
+    50% { transform: translateX(0) rotate(0deg); }
+    
+    /* Rotation Phase - Next 1.5 seconds */
+    55% { transform: translateX(0) rotate(-10deg) scale(1.05); }
+    60% { transform: translateX(0) rotate(10deg) scale(1.08); }
+    65% { transform: translateX(0) rotate(-8deg) scale(1.05); }
+    70% { transform: translateX(0) rotate(8deg) scale(1.02); }
+    75% { transform: translateX(0) rotate(-5deg) scale(1); }
+    80% { transform: translateX(0) rotate(5deg) scale(1); }
+    85% { transform: translateX(0) rotate(-3deg); }
+    90% { transform: translateX(0) rotate(3deg); }
+    95% { transform: translateX(0) rotate(-1deg); }
+    100% { transform: translateX(0) rotate(0deg); }
+}
+
+/* Pulse Ring Animation (increases during vibration) */
+.floating-ai-btn.vibrate::before {
+    animation: pulseRingFast 2s ease-out infinite;
+}
+
+@keyframes pulseRingFast {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(2); opacity: 0; }
+}
+
+.floating-ai-btn.vibrate::after {
+    animation: glowPulseFast 1.5s ease-in-out infinite;
+}
+
+@keyframes glowPulseFast {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.5); opacity: 1; }
+}
+
+/* Regular pulse after animation */
+.floating-ai-btn::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid rgba(16, 185, 129, 0.3);
+    animation: pulseRing 3s ease-out infinite;
+}
+
+@keyframes pulseRing {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+.floating-ai-btn::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.15), transparent 70%);
+    animation: glowPulse 3s ease-in-out infinite;
+    z-index: -1;
+}
+
+@keyframes glowPulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* ===== CHAT TEXT ===== */
+.floating-ai-text {
+    position: absolute;
+    right: 80px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 8px 16px 8px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.floating-ai-text .text-arrow {
+    display: inline-block;
+    animation: textArrow 1.5s ease-in-out infinite;
+}
+
+@keyframes textArrow {
+    0%, 100% { transform: translateX(0); opacity: 0.6; }
+    50% { transform: translateX(5px); opacity: 1; }
+}
+
+.floating-ai-text::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left: 8px solid rgba(15, 23, 42, 0.95);
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+}
+
+.floating-ai-btn:hover .floating-ai-text {
+    opacity: 1;
+    transform: translateY(-50%) translateX(-8px);
+}
+
+/* Badge */
+.floating-ai-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #ef4444;
+    color: white;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: 50%;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    border: 2px solid #030712;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Status indicator */
+.floating-ai-status {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 16px;
+    height: 16px;
+    background: #10b981;
+    border-radius: 50%;
+    border: 2px solid #030712;
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+    .floating-ai-btn {
+        width: 60px;
+        height: 60px;
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .floating-ai-text {
+        display: none;
+    }
+}
+</style>
+</head>
+<body>
+
+<!-- AMBIENT BACKGROUND -->
+<div class="bg-ambient">
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+</div>
+<div class="bg-grid"></div>
+
+<!-- PEOPLE ILLUSTRATIONS -->
+<div class="bg-people" id="bg-people">
+
+  <!-- Figure Top-Left: Professional woman with laptop -->
+  <div class="person-fig fig-tl" id="fig-tl">
+    <svg width="180" height="320" viewBox="0 0 180 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Body/clothes -->
+      <ellipse cx="90" cy="290" rx="55" ry="30" fill="rgba(0,196,106,0.04)"/>
+      <!-- Legs -->
+      <rect x="72" y="220" width="18" height="80" rx="9" fill="rgba(0,196,106,0.06)"/>
+      <rect x="92" y="220" width="18" height="80" rx="9" fill="rgba(0,196,106,0.06)"/>
+      <!-- Torso / blazer -->
+      <path d="M55 140 Q60 120 90 118 Q120 120 125 140 L130 230 Q105 240 90 240 Q75 240 50 230 Z" fill="rgba(0,196,106,0.07)" stroke="rgba(0,196,106,0.12)" stroke-width="0.5"/>
+      <!-- Collar -->
+      <path d="M78 130 L90 148 L102 130" stroke="rgba(0,196,106,0.18)" stroke-width="1" fill="none"/>
+      <!-- Arms -->
+      <path d="M57 145 Q30 170 35 200 Q40 215 55 210" stroke="rgba(0,196,106,0.1)" stroke-width="14" stroke-linecap="round" fill="none"/>
+      <path d="M123 145 Q150 165 148 195 Q146 210 132 210" stroke="rgba(0,196,106,0.1)" stroke-width="14" stroke-linecap="round" fill="none"/>
+      <!-- Laptop -->
+      <rect x="28" y="195" width="58" height="36" rx="3" fill="rgba(0,196,106,0.08)" stroke="rgba(0,196,106,0.15)" stroke-width="0.5"/>
+      <rect x="30" y="197" width="54" height="28" rx="2" fill="rgba(0,196,106,0.04)"/>
+      <!-- Screen glow lines -->
+      <line x1="34" y1="203" x2="62" y2="203" stroke="rgba(0,196,106,0.15)" stroke-width="1"/>
+      <line x1="34" y1="208" x2="55" y2="208" stroke="rgba(0,196,106,0.1)" stroke-width="1"/>
+      <line x1="34" y1="213" x2="58" y2="213" stroke="rgba(0,196,106,0.08)" stroke-width="1"/>
+      <!-- Neck -->
+      <rect x="82" y="100" width="16" height="25" rx="8" fill="rgba(0,196,106,0.08)"/>
+      <!-- Head -->
+      <ellipse cx="90" cy="85" rx="26" ry="30" fill="rgba(0,196,106,0.07)" stroke="rgba(0,196,106,0.12)" stroke-width="0.5"/>
+      <!-- Hair -->
+      <path d="M64 75 Q68 48 90 46 Q112 48 116 75 Q112 55 90 53 Q68 55 64 75 Z" fill="rgba(0,196,106,0.1)"/>
+      <!-- Face hints -->
+      <ellipse cx="82" cy="84" rx="3" ry="3.5" fill="rgba(0,196,106,0.15)"/>
+      <ellipse cx="98" cy="84" rx="3" ry="3.5" fill="rgba(0,196,106,0.15)"/>
+      <path d="M84 96 Q90 100 96 96" stroke="rgba(0,196,106,0.18)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    </svg>
+    <!-- Floating chip near this figure -->
+    <div class="stat-chip" style="top:60px;left:160px;animation-delay:1.8s">Python · SQL</div>
+  </div>
+
+  <!-- Figure Top-Right: Professional man with clipboard -->
+  <div class="person-fig fig-tr" id="fig-tr">
+    <svg width="160" height="300" viewBox="0 0 160 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="80" cy="275" rx="48" ry="26" fill="rgba(232,184,75,0.04)"/>
+      <!-- Legs -->
+      <rect x="62" y="205" width="17" height="78" rx="8" fill="rgba(232,184,75,0.06)"/>
+      <rect x="82" y="205" width="17" height="78" rx="8" fill="rgba(232,184,75,0.06)"/>
+      <!-- Torso -->
+      <path d="M42 130 Q48 112 80 110 Q112 112 118 130 L122 218 Q98 228 80 228 Q62 228 38 218 Z" fill="rgba(232,184,75,0.07)" stroke="rgba(232,184,75,0.12)" stroke-width="0.5"/>
+      <!-- Tie -->
+      <path d="M76 120 L80 145 L84 120 Z" fill="rgba(232,184,75,0.12)"/>
+      <path d="M78 145 L80 168 L82 145 Z" fill="rgba(232,184,75,0.1)"/>
+      <!-- Arms -->
+      <path d="M44 138 Q20 158 22 190 Q24 204 38 200" stroke="rgba(232,184,75,0.1)" stroke-width="13" stroke-linecap="round" fill="none"/>
+      <path d="M116 138 Q138 155 136 186 Q134 200 122 197" stroke="rgba(232,184,75,0.1)" stroke-width="13" stroke-linecap="round" fill="none"/>
+      <!-- Clipboard -->
+      <rect x="120" y="170" width="44" height="56" rx="4" fill="rgba(232,184,75,0.08)" stroke="rgba(232,184,75,0.15)" stroke-width="0.5"/>
+      <rect x="132" y="164" width="20" height="10" rx="3" fill="rgba(232,184,75,0.12)"/>
+      <line x1="125" y1="185" x2="158" y2="185" stroke="rgba(232,184,75,0.15)" stroke-width="1"/>
+      <line x1="125" y1="192" x2="153" y2="192" stroke="rgba(232,184,75,0.1)" stroke-width="1"/>
+      <line x1="125" y1="199" x2="156" y2="199" stroke="rgba(232,184,75,0.08)" stroke-width="1"/>
+      <line x1="125" y1="206" x2="150" y2="206" stroke="rgba(232,184,75,0.08)" stroke-width="1"/>
+      <!-- Neck -->
+      <rect x="72" y="92" width="16" height="24" rx="8" fill="rgba(232,184,75,0.07)"/>
+      <!-- Head -->
+      <ellipse cx="80" cy="77" rx="24" ry="28" fill="rgba(232,184,75,0.07)" stroke="rgba(232,184,75,0.12)" stroke-width="0.5"/>
+      <!-- Hair (short) -->
+      <path d="M56 68 Q60 44 80 43 Q100 44 104 68 Q98 50 80 49 Q62 50 56 68 Z" fill="rgba(232,184,75,0.1)"/>
+      <!-- Face -->
+      <ellipse cx="73" cy="76" rx="2.5" ry="3" fill="rgba(232,184,75,0.15)"/>
+      <ellipse cx="87" cy="76" rx="2.5" ry="3" fill="rgba(232,184,75,0.15)"/>
+      <path d="M75 87 Q80 91 85 87" stroke="rgba(232,184,75,0.18)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div class="stat-chip gold" style="bottom:120px;right:155px;animation-delay:2.2s">Finance · OHADA</div>
+  </div>
+
+  <!-- Figure Bottom-Left: Young professional with phone -->
+  <div class="person-fig fig-bl" id="fig-bl">
+    <svg width="150" height="260" viewBox="0 0 150 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="75" cy="242" rx="44" ry="22" fill="rgba(92,158,232,0.04)"/>
+      <!-- Legs -->
+      <rect x="58" y="186" width="15" height="66" rx="7" fill="rgba(92,158,232,0.06)"/>
+      <rect x="76" y="186" width="15" height="66" rx="7" fill="rgba(92,158,232,0.06)"/>
+      <!-- Torso (casual) -->
+      <path d="M38 118 Q44 102 75 100 Q106 102 112 118 L115 196 Q92 204 75 204 Q58 204 35 196 Z" fill="rgba(92,158,232,0.07)" stroke="rgba(92,158,232,0.12)" stroke-width="0.5"/>
+      <!-- T-shirt neckline -->
+      <path d="M63 108 Q75 120 87 108" stroke="rgba(92,158,232,0.2)" stroke-width="1" fill="none"/>
+      <!-- Arms -->
+      <path d="M40 124 Q18 142 20 170 Q22 183 35 180" stroke="rgba(92,158,232,0.1)" stroke-width="12" stroke-linecap="round" fill="none"/>
+      <path d="M110 124 Q130 140 128 167 Q126 180 114 177" stroke="rgba(92,158,232,0.1)" stroke-width="12" stroke-linecap="round" fill="none"/>
+      <!-- Phone -->
+      <rect x="112" y="155" width="24" height="40" rx="4" fill="rgba(92,158,232,0.08)" stroke="rgba(92,158,232,0.15)" stroke-width="0.5"/>
+      <rect x="114" y="158" width="20" height="32" rx="2" fill="rgba(92,158,232,0.05)"/>
+      <rect x="120" y="185" width="8" height="2" rx="1" fill="rgba(92,158,232,0.15)"/>
+      <!-- Screen lines -->
+      <line x1="116" y1="163" x2="132" y2="163" stroke="rgba(92,158,232,0.2)" stroke-width="0.8"/>
+      <line x1="116" y1="167" x2="128" y2="167" stroke="rgba(92,158,232,0.12)" stroke-width="0.8"/>
+      <!-- Neck -->
+      <rect x="68" y="82" width="14" height="22" rx="7" fill="rgba(92,158,232,0.07)"/>
+      <!-- Head -->
+      <ellipse cx="75" cy="68" rx="22" ry="26" fill="rgba(92,158,232,0.07)" stroke="rgba(92,158,232,0.12)" stroke-width="0.5"/>
+      <!-- Natural hair -->
+      <ellipse cx="75" cy="52" rx="25" ry="20" fill="rgba(92,158,232,0.1)"/>
+      <ellipse cx="56" cy="62" rx="12" ry="16" fill="rgba(92,158,232,0.08)"/>
+      <ellipse cx="94" cy="62" rx="12" ry="16" fill="rgba(92,158,232,0.08)"/>
+      <!-- Face -->
+      <ellipse cx="68" cy="68" rx="2.5" ry="3" fill="rgba(92,158,232,0.15)"/>
+      <ellipse cx="82" cy="68" rx="2.5" ry="3" fill="rgba(92,158,232,0.15)"/>
+      <path d="M70 78 Q75 82 80 78" stroke="rgba(92,158,232,0.18)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div class="stat-chip blue" style="top:40px;left:140px;animation-delay:1.4s">UI/UX · Design</div>
+  </div>
+
+  <!-- Figure Bottom-Right: Professional woman with book/document -->
+  <div class="person-fig fig-br" id="fig-br">
+    <svg width="155" height="280" viewBox="0 0 155 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="77" cy="258" rx="46" ry="24" fill="rgba(160,92,232,0.04)"/>
+      <!-- Legs -->
+      <rect x="60" y="200" width="16" height="68" rx="8" fill="rgba(160,92,232,0.06)"/>
+      <rect x="79" y="200" width="16" height="68" rx="8" fill="rgba(160,92,232,0.06)"/>
+      <!-- Torso -->
+      <path d="M40 125 Q46 108 77 106 Q108 108 115 125 L118 210 Q96 220 77 220 Q58 220 36 210 Z" fill="rgba(160,92,232,0.07)" stroke="rgba(160,92,232,0.12)" stroke-width="0.5"/>
+      <!-- Jacket lapels -->
+      <path d="M65 115 L77 132 L89 115" stroke="rgba(160,92,232,0.2)" stroke-width="1" fill="none"/>
+      <!-- Arms -->
+      <path d="M42 132 Q18 152 20 182 Q22 196 36 192" stroke="rgba(160,92,232,0.1)" stroke-width="13" stroke-linecap="round" fill="none"/>
+      <path d="M112 132 Q134 150 132 180 Q130 194 118 190" stroke="rgba(160,92,232,0.1)" stroke-width="13" stroke-linecap="round" fill="none"/>
+      <!-- Documents/folder -->
+      <rect x="18" y="172" width="38" height="50" rx="3" fill="rgba(160,92,232,0.08)" stroke="rgba(160,92,232,0.15)" stroke-width="0.5"/>
+      <rect x="20" y="166" width="32" height="8" rx="2" fill="rgba(160,92,232,0.1)"/>
+      <line x1="22" y1="183" x2="50" y2="183" stroke="rgba(160,92,232,0.15)" stroke-width="0.8"/>
+      <line x1="22" y1="189" x2="46" y2="189" stroke="rgba(160,92,232,0.1)" stroke-width="0.8"/>
+      <line x1="22" y1="195" x2="48" y2="195" stroke="rgba(160,92,232,0.08)" stroke-width="0.8"/>
+      <line x1="22" y1="201" x2="44" y2="201" stroke="rgba(160,92,232,0.08)" stroke-width="0.8"/>
+      <!-- Neck -->
+      <rect x="70" y="88" width="14" height="22" rx="7" fill="rgba(160,92,232,0.07)"/>
+      <!-- Head -->
+      <ellipse cx="77" cy="73" rx="23" ry="27" fill="rgba(160,92,232,0.07)" stroke="rgba(160,92,232,0.12)" stroke-width="0.5"/>
+      <!-- Hair (braids/long) -->
+      <path d="M54 65 Q58 42 77 40 Q96 42 100 65 Q94 46 77 44 Q60 46 54 65 Z" fill="rgba(160,92,232,0.1)"/>
+      <path d="M54 65 Q48 90 52 115" stroke="rgba(160,92,232,0.07)" stroke-width="6" stroke-linecap="round"/>
+      <path d="M100 65 Q106 90 102 115" stroke="rgba(160,92,232,0.07)" stroke-width="6" stroke-linecap="round"/>
+      <!-- Face -->
+      <ellipse cx="70" cy="73" rx="2.5" ry="3" fill="rgba(160,92,232,0.15)"/>
+      <ellipse cx="84" cy="73" rx="2.5" ry="3" fill="rgba(160,92,232,0.15)"/>
+      <path d="M72 83 Q77 87 82 83" stroke="rgba(160,92,232,0.18)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    </svg>
+    <div class="stat-chip" style="top:50px;right:148px;animation-delay:2.6s;border-color:rgba(160,92,232,0.25);color:#A05CE8">HR · Leadership</div>
+  </div>
+
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="skillsync-home.html" class="nav-back">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Back
+  </a>
+  <a href="#" class="nav-logo">
+    <span class="nl1">Skill</span><span class="nl2">Sync</span><span class="nl3">CM</span>
+  </a>
+  <div style="width:80px"></div>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <div class="page-header-inner">
+    <div>
+      <div class="ph-label">Tool</div>
+      <h1 class="ph-title">Skill Gap<br><span class="acc">Analyzer</span></h1>
+      <p class="ph-desc">Select your target role, add your current skills, and receive a precise breakdown of what separates you from Cameroon's job market requirements.</p>
+      <!-- Stat strip -->
+      <div class="stat-strip">
+        <div class="stat-strip-card">
+          <div class="ssc-dot" style="background:var(--green)"></div>
+          <div>
+            <div class="ssc-val" id="ssc-1">0</div>
+            <div class="ssc-label">Career Tracks</div>
+          </div>
+        </div>
+        <div class="stat-strip-card">
+          <div class="ssc-dot" style="background:var(--gold)"></div>
+          <div>
+            <div class="ssc-val" id="ssc-2">0</div>
+            <div class="ssc-label">Skills Mapped</div>
+          </div>
+        </div>
+        <div class="stat-strip-card">
+          <div class="ssc-dot" style="background:var(--blue)"></div>
+          <div>
+            <div class="ssc-val" id="ssc-3">0</div>
+            <div class="ssc-label">Competency Dimensions</div>
+          </div>
+        </div>
+        <div class="stat-strip-card">
+          <div class="ssc-dot" style="background:var(--purple)"></div>
+          <div>
+            <div class="ssc-val" id="ssc-4">0</div>
+            <div class="ssc-label">Open Roles Tracked</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ph-stats">
+      <div class="phs-item">
+        <div class="phs-val">15<span>+</span></div>
+        <div class="phs-label">Career Tracks</div>
+      </div>
+      <div class="phs-item">
+        <div class="phs-val">100<span>+</span></div>
+        <div class="phs-label">Skills Mapped</div>
+      </div>
+      <div class="phs-item">
+        <div class="phs-val">6</div>
+        <div class="phs-label">Competency Dimensions</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="left-panel">
+    <div class="panel">
+      <div class="panel-title">Step 1 — Select Target Role</div>
+      <input class="role-search" type="text" placeholder="Search roles..." id="role-search" oninput="filterRoles(this.value)">
+      <div class="role-grid" id="role-grid"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Step 2 — Add Your Skills</div>
+      <div class="skill-input-wrap">
+        <textarea class="skill-input" id="skill-input"
+          placeholder="Type a skill and press Enter, or comma-separate: Python, SQL, Excel..."
+          onkeydown="handleSkillInput(event)"
+          oninput="handleSkillChange(this)"></textarea>
+      </div>
+      <div class="skill-hint">Press Enter or comma to add. Click tags to remove.</div>
+      <div class="skill-pills" id="skill-pills"></div>
+      <div style="margin-top:16px">
+        <div style="font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;font-family:'DM Mono',monospace">Quick Add</div>
+        <div class="quick-skills" id="quick-skills"></div>
+      </div>
+      <button class="btn-analyze" id="analyze-btn" onclick="runAnalysis()" disabled>
+        <span class="btn-text">Run Analysis</span>
+        <span class="btn-loading"><div class="spinner"></div>Analyzing...</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="empty-state" id="empty-state">
+      <!-- Floating skill tags in background -->
+      <div class="es-float-tags" id="es-float-tags"></div>
+
+      <div class="es-icon-wrap">
+        <div class="es-icon-pulse"></div>
+        <div class="es-icon-pulse2"></div>
+        <div class="es-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <circle cx="14" cy="14" r="11" stroke="var(--muted)" stroke-width="1.5"/>
+            <path d="M9 14h10M14 9v10" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="es-title">Configure Your Analysis</div>
+      <p class="es-desc">Choose a target role and enter your current skills to generate a complete gap analysis with visual insights.</p>
+      <div class="es-steps">
+        <div class="es-step">
+          <div class="es-step-num">1</div>
+          <span>Select a target role from the left panel</span>
+        </div>
+        <div class="es-step">
+          <div class="es-step-num">2</div>
+          <span>Add your current skills by typing or quick-add</span>
+        </div>
+        <div class="es-step">
+          <div class="es-step-num">3</div>
+          <span>Click Run Analysis to see your results</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="results" id="results">
+      <div id="verdict-banner" class="fade-in-up"></div>
+      <div class="score-row fade-in-up" style="animation-delay:0.1s">
+        <div class="score-main">
+          <div class="score-ring-wrap">
+            <canvas id="score-ring" width="120" height="120"></canvas>
+            <div class="score-ring-val">
+              <div class="srv-num" id="srv-num">0</div>
+              <div class="srv-denom">/ 100</div>
+            </div>
+          </div>
+          <div class="score-label" id="score-label">Readiness Score</div>
+          <div class="score-sub" id="score-sub"></div>
+        </div>
+        <div class="score-metric">
+          <div class="sm-label">Skills Matched</div>
+          <div class="sm-val green" id="sm-matched">0</div>
+          <div style="font-size:12px;color:var(--muted)" id="sm-matched-sub"></div>
+          <div class="sm-bar-track"><div class="sm-bar-fill" id="sm-matched-bar" style="background:var(--green)"></div></div>
+        </div>
+        <div class="score-metric">
+          <div class="sm-label">Skills Missing</div>
+          <div class="sm-val red" id="sm-missing">0</div>
+          <div style="font-size:12px;color:var(--muted)" id="sm-missing-sub"></div>
+          <div class="sm-bar-track"><div class="sm-bar-fill" id="sm-missing-bar" style="background:var(--red)"></div></div>
+        </div>
+        <div class="score-metric">
+          <div class="sm-label">Market Demand</div>
+          <div class="sm-val gold" id="sm-demand">—</div>
+          <div style="font-size:12px;color:var(--muted)" id="sm-demand-sub">Role demand in Cameroon</div>
+          <div class="sm-bar-track"><div class="sm-bar-fill" id="sm-demand-bar" style="background:var(--gold)"></div></div>
+        </div>
+      </div>
+      <div class="charts-row fade-in-up" style="animation-delay:0.2s">
+        <div class="chart-card">
+          <div class="cc-header">
+            <div>
+              <div class="cc-title">Competency Radar</div>
+              <div class="cc-sub">Your profile vs. market requirement</div>
+            </div>
+          </div>
+          <div class="chart-wrap radar"><canvas id="radar-chart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="cc-header">
+            <div>
+              <div class="cc-title">Market Demand by Skill</div>
+              <div class="cc-sub">Frequency in Cameroon job postings</div>
+            </div>
+          </div>
+          <div class="chart-wrap bars"><canvas id="demand-chart"></canvas></div>
+        </div>
+      </div>
+      <div class="match-detail fade-in-up" style="animation-delay:0.25s">
+        <div class="cc-header" style="margin-bottom:20px">
+          <div>
+            <div class="cc-title">Skill-by-Skill Match Analysis</div>
+            <div class="cc-sub" id="match-role-label">Required skills for selected role</div>
+          </div>
+        </div>
+        <div class="md-chart-wrap"><canvas id="match-chart"></canvas></div>
+      </div>
+      <div class="skills-breakdown fade-in-up" style="animation-delay:0.3s">
+        <div class="sb-tabs">
+          <button class="sb-tab active" data-sbt="all" onclick="switchSkillTab('all',this)">All Skills</button>
+          <button class="sb-tab" data-sbt="have" onclick="switchSkillTab('have',this)">You Have</button>
+          <button class="sb-tab" data-sbt="miss" onclick="switchSkillTab('miss',this)">You Need</button>
+        </div>
+        <div class="sb-content active" id="sbt-all"><div class="skills-grid" id="tags-all"></div></div>
+        <div class="sb-content" id="sbt-have"><div class="skills-grid" id="tags-have"></div></div>
+        <div class="sb-content" id="sbt-miss"><div class="skills-grid" id="tags-miss"></div></div>
+      </div>
+      <div class="roadmap fade-in-up" style="animation-delay:0.35s">
+        <div class="rm-title">Your Priority Learning Roadmap</div>
+        <div class="rm-desc">Missing skills ranked by market demand and learning order — focus on Phase 1 first.</div>
+        <div class="rm-grid" id="roadmap-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ROLES=[{id:'webdev',name:'Web Developer',track:'Technology',count:'47 openings',marketDemand:'High',demandBar:82,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[90,60,50,30,80,70],weights:[0.3,0.15,0.1,0.05,0.25,0.15]},quickAdd:['HTML','CSS','JavaScript','React','Git'],required:[{name:'HTML',demand:95,cat:'Frontend'},{name:'CSS',demand:92,cat:'Frontend'},{name:'JavaScript',demand:90,cat:'Frontend'},{name:'React',demand:78,cat:'Frontend'},{name:'TypeScript',demand:55,cat:'Frontend'},{name:'Vue.js',demand:40,cat:'Frontend'},{name:'Git',demand:85,cat:'DevOps'},{name:'REST APIs',demand:80,cat:'Backend'},{name:'Node.js',demand:65,cat:'Backend'},{name:'SQL',demand:60,cat:'Database'},{name:'Responsive Design',demand:88,cat:'Frontend'},{name:'Tailwind CSS',demand:60,cat:'Frontend'},{name:'Webpack / Vite',demand:45,cat:'Tools'},{name:'Unit Testing',demand:50,cat:'Quality'},{name:'Figma / UI Basics',demand:55,cat:'Design'},{name:'HTTP / Web Protocols',demand:65,cat:'Networking'},{name:'Problem Solving',demand:85,cat:'Soft Skills'},{name:'Communication',demand:75,cat:'Soft Skills'}]},{id:'dataanalyst',name:'Data Analyst',track:'Technology',count:'18 openings',marketDemand:'High',demandBar:88,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[75,95,70,35,65,80],weights:[0.2,0.3,0.15,0.05,0.15,0.15]},quickAdd:['Python','SQL','Excel','Power BI','Pandas'],required:[{name:'Python',demand:90,cat:'Programming'},{name:'SQL',demand:95,cat:'Database'},{name:'Excel',demand:93,cat:'Tools'},{name:'Power BI',demand:72,cat:'Visualization'},{name:'Tableau',demand:55,cat:'Visualization'},{name:'Pandas',demand:80,cat:'Libraries'},{name:'NumPy',demand:70,cat:'Libraries'},{name:'Data Cleaning',demand:88,cat:'Core'},{name:'Statistics',demand:82,cat:'Core'},{name:'Data Visualization',demand:85,cat:'Core'},{name:'Business Intelligence',demand:68,cat:'Domain'},{name:'Dashboard Design',demand:65,cat:'Tools'},{name:'ETL Processes',demand:58,cat:'Data Eng.'},{name:'Google Analytics',demand:60,cat:'Tools'},{name:'Critical Thinking',demand:87,cat:'Soft Skills'},{name:'Storytelling',demand:75,cat:'Soft Skills'},{name:'Communication',demand:80,cat:'Soft Skills'},{name:'Problem Solving',demand:85,cat:'Soft Skills'}]},{id:'cybersec',name:'Cybersecurity Specialist',track:'Technology',count:'11 openings',marketDemand:'Growing',demandBar:91,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[95,88,55,50,70,92],weights:[0.35,0.25,0.1,0.1,0.1,0.1]},quickAdd:['Networking','Linux','Python','CCNA','Ethical Hacking'],required:[{name:'Networking (TCP/IP)',demand:95,cat:'Core'},{name:'Linux',demand:92,cat:'OS'},{name:'Python',demand:80,cat:'Programming'},{name:'CCNA / Routing',demand:85,cat:'Certification'},{name:'Ethical Hacking',demand:78,cat:'Offensive'},{name:'Firewalls',demand:82,cat:'Defensive'},{name:'SIEM Tools',demand:70,cat:'Monitoring'},{name:'Incident Response',demand:75,cat:'Defensive'},{name:'Penetration Testing',demand:72,cat:'Offensive'},{name:'Vulnerability Assessment',demand:76,cat:'Core'},{name:'Cryptography',demand:65,cat:'Core'},{name:'Risk Management',demand:70,cat:'Management'},{name:'Windows Server',demand:78,cat:'OS'},{name:'Active Directory',demand:68,cat:'Tools'},{name:'Nmap / Wireshark',demand:74,cat:'Tools'},{name:'Bash Scripting',demand:72,cat:'Programming'},{name:'Compliance (ISO 27001)',demand:60,cat:'Governance'},{name:'Communication',demand:68,cat:'Soft Skills'}]},{id:'neteng',name:'Network Engineer',track:'Technology',count:'15 openings',marketDemand:'Medium',demandBar:74,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[92,75,60,55,65,90],weights:[0.35,0.2,0.1,0.1,0.1,0.15]},quickAdd:['CCNA','TCP/IP','Routing','Switching','Linux'],required:[{name:'CCNA Certification',demand:92,cat:'Certification'},{name:'TCP/IP Protocols',demand:95,cat:'Core'},{name:'Routing & Switching',demand:90,cat:'Core'},{name:'Firewalls / ACL',demand:82,cat:'Security'},{name:'VPN Configuration',demand:78,cat:'Security'},{name:'Linux',demand:80,cat:'OS'},{name:'Windows Server',demand:75,cat:'OS'},{name:'Network Monitoring',demand:72,cat:'Tools'},{name:'Cisco IOS',demand:85,cat:'Vendor'},{name:'Python / Scripting',demand:65,cat:'Automation'},{name:'Wireless Networks',demand:70,cat:'Core'},{name:'VoIP',demand:55,cat:'Specialty'},{name:'Network Troubleshooting',demand:90,cat:'Core'},{name:'Documentation',demand:68,cat:'Soft Skills'},{name:'Load Balancing',demand:60,cat:'Advanced'},{name:'BGP / OSPF',demand:70,cat:'Protocols'},{name:'Cloud Networking',demand:62,cat:'Cloud'},{name:'Problem Solving',demand:85,cat:'Soft Skills'}]},{id:'softwareeng',name:'Software Engineer',track:'Technology',count:'38 openings',marketDemand:'High',demandBar:90,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[95,85,65,45,75,80],weights:[0.3,0.25,0.1,0.1,0.15,0.1]},quickAdd:['Python','JavaScript','Git','Algorithms','SQL'],required:[{name:'Python',demand:88,cat:'Programming'},{name:'JavaScript',demand:85,cat:'Programming'},{name:'Java / Kotlin',demand:70,cat:'Programming'},{name:'Data Structures',demand:92,cat:'Core CS'},{name:'Algorithms',demand:90,cat:'Core CS'},{name:'Git / Version Control',demand:92,cat:'DevOps'},{name:'SQL',demand:78,cat:'Database'},{name:'REST APIs',demand:85,cat:'Backend'},{name:'Object-Oriented Design',demand:88,cat:'Core CS'},{name:'Unit Testing',demand:78,cat:'Quality'},{name:'Docker',demand:65,cat:'DevOps'},{name:'CI/CD',demand:60,cat:'DevOps'},{name:'System Design',demand:70,cat:'Architecture'},{name:'Linux',demand:72,cat:'OS'},{name:'Agile / Scrum',demand:75,cat:'Process'},{name:'Code Review',demand:70,cat:'Process'},{name:'Problem Solving',demand:95,cat:'Soft Skills'},{name:'Communication',demand:78,cat:'Soft Skills'}]},{id:'accountant',name:'Accountant',track:'Finance',count:'29 openings',marketDemand:'High',demandBar:86,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[55,88,75,65,60,95],weights:[0.1,0.25,0.15,0.1,0.1,0.3]},quickAdd:['Excel','SAGE','QuickBooks','OHADA','Auditing'],required:[{name:'Excel (Advanced)',demand:95,cat:'Tools'},{name:'SAGE Accounting',demand:88,cat:'Software'},{name:'QuickBooks',demand:72,cat:'Software'},{name:'OHADA Standards',demand:90,cat:'Regulation'},{name:'Financial Reporting',demand:90,cat:'Core'},{name:'Tax Knowledge (Cameroon)',demand:85,cat:'Regulation'},{name:'Auditing',demand:80,cat:'Core'},{name:'Budgeting',demand:82,cat:'Core'},{name:'Bank Reconciliation',demand:85,cat:'Core'},{name:'Payroll Management',demand:78,cat:'Core'},{name:'Cost Accounting',demand:72,cat:'Specialty'},{name:'Financial Analysis',demand:78,cat:'Core'},{name:'Communication',demand:80,cat:'Soft Skills'},{name:'Attention to Detail',demand:92,cat:'Soft Skills'},{name:'Microsoft Word',demand:75,cat:'Tools'},{name:'Data Entry',demand:82,cat:'Tools'},{name:'Analytical Thinking',demand:85,cat:'Soft Skills'},{name:'Integrity',demand:90,cat:'Soft Skills'}]},{id:'finanalyst',name:'Financial Analyst',track:'Finance',count:'22 openings',marketDemand:'Medium',demandBar:78,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[65,95,75,60,70,90],weights:[0.15,0.3,0.15,0.1,0.15,0.15]},quickAdd:['Excel','Financial Modeling','Power BI','SQL','Statistics'],required:[{name:'Excel (Financial Modeling)',demand:95,cat:'Core'},{name:'Financial Statements',demand:92,cat:'Core'},{name:'Valuation Methods',demand:85,cat:'Core'},{name:'SQL',demand:72,cat:'Data'},{name:'Power BI / Tableau',demand:78,cat:'Visualization'},{name:'Statistics',demand:80,cat:'Core'},{name:'Python (Finance)',demand:60,cat:'Programming'},{name:'Bloomberg / Reuters',demand:55,cat:'Tools'},{name:'Risk Analysis',demand:82,cat:'Core'},{name:'Forecasting',demand:88,cat:'Core'},{name:'Presentation Skills',demand:80,cat:'Soft Skills'},{name:'Critical Thinking',demand:90,cat:'Soft Skills'},{name:'Market Research',demand:75,cat:'Research'},{name:'IFRS Knowledge',demand:70,cat:'Regulation'},{name:'Communication',demand:82,cat:'Soft Skills'},{name:'Attention to Detail',demand:88,cat:'Soft Skills'},{name:'Report Writing',demand:78,cat:'Communication'},{name:'Budgeting',demand:75,cat:'Core'}]},{id:'marketing',name:'Digital Marketer',track:'Marketing',count:'31 openings',marketDemand:'Growing',demandBar:85,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[55,72,90,60,92,75],weights:[0.1,0.15,0.25,0.1,0.3,0.1]},quickAdd:['Social Media','SEO','Google Ads','Canva','Analytics'],required:[{name:'Social Media Marketing',demand:92,cat:'Core'},{name:'SEO / SEM',demand:85,cat:'Core'},{name:'Google Ads',demand:80,cat:'Paid'},{name:'Facebook Ads',demand:82,cat:'Paid'},{name:'Content Creation',demand:90,cat:'Core'},{name:'Canva / Design Basics',demand:78,cat:'Tools'},{name:'Google Analytics',demand:82,cat:'Analytics'},{name:'Email Marketing',demand:72,cat:'Channels'},{name:'Copywriting',demand:85,cat:'Core'},{name:'Brand Strategy',demand:70,cat:'Strategy'},{name:'Video Editing Basics',demand:65,cat:'Media'},{name:'Community Management',demand:78,cat:'Core'},{name:'Market Research',demand:75,cat:'Research'},{name:'CRM Tools',demand:60,cat:'Tools'},{name:'Communication',demand:92,cat:'Soft Skills'},{name:'Creativity',demand:88,cat:'Soft Skills'},{name:'Data Analysis',demand:70,cat:'Analytical'},{name:'Storytelling',demand:82,cat:'Soft Skills'}]},{id:'pm',name:'Project Manager',track:'Management',count:'33 openings',marketDemand:'High',demandBar:84,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[45,80,90,98,65,70],weights:[0.05,0.2,0.25,0.3,0.1,0.1]},quickAdd:['Agile','MS Project','Communication','Risk Management','Leadership'],required:[{name:'Agile / Scrum',demand:88,cat:'Methodology'},{name:'PMP / PRINCE2',demand:72,cat:'Certification'},{name:'MS Project',demand:80,cat:'Tools'},{name:'Risk Management',demand:88,cat:'Core'},{name:'Stakeholder Management',demand:90,cat:'Core'},{name:'Budget Planning',demand:85,cat:'Core'},{name:'Leadership',demand:95,cat:'Soft Skills'},{name:'Communication',demand:95,cat:'Soft Skills'},{name:'Jira / Trello',demand:75,cat:'Tools'},{name:'Problem Solving',demand:90,cat:'Soft Skills'},{name:'Resource Planning',demand:82,cat:'Core'},{name:'Report Writing',demand:80,cat:'Communication'},{name:'Conflict Resolution',demand:78,cat:'Soft Skills'},{name:'Excel',demand:78,cat:'Tools'},{name:'Critical Thinking',demand:88,cat:'Soft Skills'},{name:'Time Management',demand:90,cat:'Soft Skills'},{name:'Change Management',demand:70,cat:'Advanced'},{name:'Negotiation',demand:75,cat:'Soft Skills'}]},{id:'hrmanager',name:'HR Manager',track:'Management',count:'19 openings',marketDemand:'Medium',demandBar:70,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[35,70,92,88,55,85],weights:[0.05,0.15,0.3,0.25,0.1,0.15]},quickAdd:['Recruitment','Labor Law','Excel','Communication','Payroll'],required:[{name:'Recruitment & Selection',demand:92,cat:'Core'},{name:'Cameroon Labor Law',demand:88,cat:'Regulation'},{name:'Payroll Management',demand:85,cat:'Core'},{name:'Performance Management',demand:82,cat:'Core'},{name:'Training & Development',demand:78,cat:'Core'},{name:'Employee Relations',demand:85,cat:'Core'},{name:'HR Information Systems',demand:68,cat:'Tools'},{name:'Excel',demand:82,cat:'Tools'},{name:'Communication',demand:95,cat:'Soft Skills'},{name:'Conflict Resolution',demand:85,cat:'Soft Skills'},{name:'Organizational Development',demand:72,cat:'Advanced'},{name:'Compensation & Benefits',demand:78,cat:'Core'},{name:'Interviewing Skills',demand:90,cat:'Core'},{name:'Policy Writing',demand:75,cat:'Documentation'},{name:'Leadership',demand:82,cat:'Soft Skills'},{name:'Emotional Intelligence',demand:88,cat:'Soft Skills'},{name:'HRIS / Odoo',demand:60,cat:'Tools'},{name:'Report Writing',demand:78,cat:'Documentation'}]},{id:'cloudeng',name:'Cloud Engineer',track:'Technology',count:'14 openings',marketDemand:'Growing',demandBar:94,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[95,80,55,45,88,85],weights:[0.35,0.2,0.1,0.1,0.15,0.1]},quickAdd:['AWS','Linux','Python','Docker','Terraform'],required:[{name:'AWS / Azure / GCP',demand:92,cat:'Cloud'},{name:'Linux',demand:90,cat:'OS'},{name:'Docker',demand:85,cat:'Containers'},{name:'Kubernetes',demand:72,cat:'Containers'},{name:'Terraform / IaC',demand:75,cat:'Automation'},{name:'Python',demand:82,cat:'Programming'},{name:'CI/CD Pipelines',demand:78,cat:'DevOps'},{name:'Networking (Cloud)',demand:80,cat:'Networking'},{name:'Monitoring (CloudWatch)',demand:70,cat:'Observability'},{name:'Security (IAM)',demand:78,cat:'Security'},{name:'Bash Scripting',demand:80,cat:'Programming'},{name:'Git',demand:88,cat:'Tools'},{name:'Microservices',demand:68,cat:'Architecture'},{name:'Load Balancing',demand:72,cat:'Architecture'},{name:'Cost Optimization',demand:65,cat:'Management'},{name:'SQL / NoSQL',demand:70,cat:'Database'},{name:'Problem Solving',demand:90,cat:'Soft Skills'},{name:'Documentation',demand:72,cat:'Soft Skills'}]},{id:'uiuxdesigner',name:'UI/UX Designer',track:'Design',count:'27 openings',marketDemand:'Growing',demandBar:88,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[60,75,85,40,90,88],weights:[0.1,0.2,0.2,0.05,0.25,0.2]},quickAdd:['Figma','User Research','Prototyping','CSS','Adobe XD'],required:[{name:'Figma',demand:92,cat:'Tools'},{name:'Adobe XD',demand:65,cat:'Tools'},{name:'User Research',demand:85,cat:'Core'},{name:'Wireframing',demand:90,cat:'Core'},{name:'Prototyping',demand:88,cat:'Core'},{name:'Usability Testing',demand:80,cat:'Core'},{name:'Design Systems',demand:75,cat:'Advanced'},{name:'CSS / HTML Basics',demand:70,cat:'Technical'},{name:'Typography',demand:78,cat:'Visual'},{name:'Color Theory',demand:75,cat:'Visual'},{name:'Accessibility (WCAG)',demand:65,cat:'Standards'},{name:'Motion / Animation',demand:60,cat:'Visual'},{name:'User Personas',demand:82,cat:'Research'},{name:'Information Architecture',demand:78,cat:'Core'},{name:'Communication',demand:88,cat:'Soft Skills'},{name:'Creativity',demand:90,cat:'Soft Skills'},{name:'Adobe Illustrator',demand:62,cat:'Tools'},{name:'Attention to Detail',demand:85,cat:'Soft Skills'}]},{id:'teacher',name:'Secondary School Teacher',track:'Education',count:'41 openings',marketDemand:'High',demandBar:80,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[35,72,95,80,55,92],weights:[0.05,0.15,0.3,0.2,0.1,0.2]},quickAdd:['Subject Mastery','Lesson Planning','Communication','Classroom Management','Assessment'],required:[{name:'Subject Mastery',demand:95,cat:'Core'},{name:'Lesson Planning',demand:92,cat:'Core'},{name:'Communication',demand:95,cat:'Soft Skills'},{name:'Classroom Management',demand:90,cat:'Core'},{name:'Assessment Design',demand:85,cat:'Core'},{name:'GCE / BEPC Curriculum',demand:88,cat:'Domain'},{name:'Bilingualism (Fr/En)',demand:80,cat:'Language'},{name:'Student Counseling',demand:72,cat:'Support'},{name:'Microsoft Office',demand:75,cat:'Tools'},{name:'E-learning Tools',demand:55,cat:'Digital'},{name:'Differentiated Instruction',demand:70,cat:'Pedagogy'},{name:'Report Writing',demand:80,cat:'Documentation'},{name:'Patience',demand:90,cat:'Soft Skills'},{name:'Leadership',demand:78,cat:'Soft Skills'},{name:'Critical Thinking',demand:82,cat:'Soft Skills'},{name:'Research Skills',demand:68,cat:'Core'},{name:'Parent Communication',demand:78,cat:'Soft Skills'},{name:'Time Management',demand:85,cat:'Soft Skills'}]},{id:'nurse',name:'Registered Nurse',track:'Healthcare',count:'26 openings',marketDemand:'High',demandBar:87,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[88,80,90,65,50,95],weights:[0.2,0.2,0.25,0.1,0.05,0.2]},quickAdd:['Patient Care','Clinical Skills','Communication','Medical Records','Pharmacology'],required:[{name:'Patient Care',demand:98,cat:'Core'},{name:'Clinical Assessment',demand:92,cat:'Core'},{name:'Pharmacology',demand:88,cat:'Core'},{name:'Wound Care',demand:85,cat:'Clinical'},{name:'IV Therapy',demand:82,cat:'Clinical'},{name:'Medical Records',demand:80,cat:'Documentation'},{name:'Communication',demand:95,cat:'Soft Skills'},{name:'Emergency Response',demand:82,cat:'Clinical'},{name:'Infection Control',demand:90,cat:'Safety'},{name:'Patient Education',demand:78,cat:'Core'},{name:'Empathy',demand:90,cat:'Soft Skills'},{name:'Team Collaboration',demand:85,cat:'Soft Skills'},{name:'Critical Thinking',demand:88,cat:'Soft Skills'},{name:'Medical Terminology',demand:85,cat:'Core'},{name:'Vital Signs Monitoring',demand:92,cat:'Clinical'},{name:'Computer Literacy',demand:65,cat:'Tools'},{name:'French / English',demand:85,cat:'Language'},{name:'Attention to Detail',demand:90,cat:'Soft Skills'}]},{id:'civileng',name:'Civil Engineer',track:'Engineering',count:'20 openings',marketDemand:'Medium',demandBar:76,radar:{labels:['Technical','Analytical','Communication','Management','Digital','Domain'],market:[92,85,70,72,65,90],weights:[0.3,0.2,0.15,0.15,0.1,0.1]},quickAdd:['AutoCAD','Structural Analysis','Project Management','Construction','Survey'],required:[{name:'AutoCAD',demand:92,cat:'Tools'},{name:'Structural Analysis',demand:88,cat:'Core'},{name:'Project Management',demand:82,cat:'Management'},{name:'Construction Supervision',demand:85,cat:'Core'},{name:'Surveying',demand:78,cat:'Core'},{name:'Soil Mechanics',demand:75,cat:'Core'},{name:'Hydraulics',demand:70,cat:'Specialty'},{name:'Material Testing',demand:78,cat:'Core'},{name:'Revit / BIM',demand:60,cat:'Tools'},{name:'Cost Estimation',demand:80,cat:'Core'},{name:'Technical Drawing',demand:85,cat:'Core'},{name:'Report Writing',demand:80,cat:'Documentation'},{name:'Communication',demand:78,cat:'Soft Skills'},{name:'Safety Management (HSE)',demand:82,cat:'Safety'},{name:'Mathematics',demand:90,cat:'Core'},{name:'Problem Solving',demand:88,cat:'Soft Skills'},{name:'Contract Management',demand:68,cat:'Management'},{name:'QHSE Standards',demand:72,cat:'Safety'}]}];
+
+let selectedRole=null,userSkills=[];
+let radarChart=null,demandChart=null,matchChart=null,scoreRingChart=null;
+
+/* ── ENTRANCE ANIMATIONS ── */
+function animateCounter(el, target, duration, suffix='') {
+  let start=0, startTime=null;
+  function step(t){
+    if(!startTime) startTime=t;
+    const p=Math.min((t-startTime)/duration,1);
+    const ease=1-Math.pow(1-p,3);
+    el.textContent=Math.round(ease*target)+suffix;
+    if(p<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function initEntranceAnimations(){
+  // Animate stat counters in strip
+  setTimeout(()=>{
+    animateCounter(document.getElementById('ssc-1'),15,1200,'+');
+    animateCounter(document.getElementById('ssc-2'),270,1400,'+');
+    animateCounter(document.getElementById('ssc-3'),6,800);
+    animateCounter(document.getElementById('ssc-4'),350,1600,'+');
+  },600);
+
+  // Reveal figures
+  setTimeout(()=>{ document.querySelectorAll('.person-fig').forEach(f=>f.classList.add('visible')); },300);
+
+  // Floating skill tags in empty state
+  const allSkills=['Python','SQL','React','Excel','Figma','AutoCAD','OHADA','Node.js','Power BI','Leadership','Communication','AWS','Docker','Agile','Tableau','Linux','SAGE','CCNA','Pandas','TypeScript'];
+  const colors=['rgba(0,196,106,0.08)','rgba(232,184,75,0.07)','rgba(92,158,232,0.06)','rgba(160,92,232,0.06)'];
+  const wrap=document.getElementById('es-float-tags');
+  allSkills.forEach((sk,i)=>{
+    const d=document.createElement('div');
+    d.className='es-ftag';
+    d.textContent=sk;
+    d.style.cssText=`left:${5+Math.random()*88}%;bottom:${10+Math.random()*80}%;animation-duration:${6+Math.random()*8}s;animation-delay:${Math.random()*5}s;color:${colors[i%colors.length]};font-size:${10+Math.floor(Math.random()*4)}px;`;
+    wrap.appendChild(d);
+  });
+}
+
+/* ── ROLE GRID ── */
+function init(){
+  renderRoleGrid(ROLES);
+  initEntranceAnimations();
+}
+
+function renderRoleGrid(roles){
+  const g=document.getElementById('role-grid');
+  g.innerHTML=roles.map(r=>`
+    <div class="role-card${selectedRole&&selectedRole.id===r.id?' selected':''}" onclick="selectRole('${r.id}')" id="rc-${r.id}">
+      <div class="rc-track">${r.track}</div>
+      <div class="rc-name">${r.name}</div>
+      <div class="rc-count">${r.count}</div>
+    </div>`).join('');
+}
+
+function filterRoles(q){
+  const filtered=q?ROLES.filter(r=>r.name.toLowerCase().includes(q.toLowerCase())||r.track.toLowerCase().includes(q.toLowerCase())):ROLES;
+  renderRoleGrid(filtered);
+}
+
+function selectRole(id){
+  selectedRole=ROLES.find(r=>r.id===id);
+  document.querySelectorAll('.role-card').forEach(c=>c.classList.remove('selected'));
+  const card=document.getElementById('rc-'+id);
+  if(card) card.classList.add('selected');
+  updateQuickAdd();checkReady();
+}
+
+function updateQuickAdd(){
+  if(!selectedRole) return;
+  const wrap=document.getElementById('quick-skills');
+  wrap.innerHTML=selectedRole.quickAdd.map(s=>`<button class="qs-btn" onclick="quickAdd('${s}')">${s}</button>`).join('');
+}
+
+function quickAdd(skill){
+  if(!userSkills.includes(skill)){userSkills.push(skill);renderPills();checkReady();}
+}
+
+function handleSkillInput(e){
+  if(e.key==='Enter'||e.key===','){e.preventDefault();parseAndAddSkills(e.target.value);e.target.value='';}
+}
+function handleSkillChange(el){
+  if(el.value.includes(',')){parseAndAddSkills(el.value);el.value='';}
+}
+function parseAndAddSkills(text){
+  text.split(',').map(s=>s.trim()).filter(Boolean).forEach(s=>{
+    const clean=s.replace(/\n/g,'').trim();
+    if(clean&&!userSkills.some(us=>us.toLowerCase()===clean.toLowerCase())) userSkills.push(clean);
+  });
+  renderPills();checkReady();
+}
+function renderPills(){
+  const wrap=document.getElementById('skill-pills');
+  wrap.innerHTML=userSkills.map((s,i)=>`<span class="skill-pill">${s}<button class="pill-remove" onclick="removeSkill(${i})">×</button></span>`).join('');
+}
+function removeSkill(i){userSkills.splice(i,1);renderPills();checkReady();}
+function checkReady(){document.getElementById('analyze-btn').disabled=!(selectedRole&&userSkills.length>0);}
+
+function runAnalysis(){
+  if(!selectedRole||userSkills.length===0) return;
+  const btn=document.getElementById('analyze-btn');
+  btn.classList.add('loading');
+  setTimeout(()=>{btn.classList.remove('loading');compute();},900);
+}
+
+function normalizeSkill(s){return s.toLowerCase().replace(/[^a-z0-9]/g,'');}
+function skillMatch(u,r){
+  const un=normalizeSkill(u),rn=normalizeSkill(r);
+  if(un===rn) return 'full';
+  if(rn.includes(un)||un.includes(rn)) return 'full';
+  const uw=un.split(/\s+/),rw=rn.split(/\s+/);
+  if(uw.some(w=>w.length>2&&rw.includes(w))) return 'partial';
+  return 'none';
+}
+
+function compute(){
+  const role=selectedRole,required=role.required;
+  const matched=[],partial=[],missing=[];
+  required.forEach(req=>{
+    let best='none';
+    userSkills.forEach(us=>{
+      const m=skillMatch(us,req.name);
+      if(m==='full') best='full';
+      else if(m==='partial'&&best!=='full') best='partial';
+    });
+    if(best==='full') matched.push(req);
+    else if(best==='partial') partial.push(req);
+    else missing.push(req);
+  });
+  const score=Math.round((matched.length+partial.length*0.5)/required.length*100);
+  const dims=role.radar.labels;
+  const userRadar=dims.map((dim,di)=>{
+    const catMap={'Technical':['Programming','Backend','Frontend','OS','Core CS','DevOps','Tools','Core','Clinical','Networks','Networking','Protocols','Cloud','Containers','Automation'],'Analytical':['Analytical','Statistics','Research','Analytics','Data','Data Eng.'],'Communication':['Soft Skills','Communication','Documentation','Language'],'Management':['Management','Process','Methodology','Governance','Safety'],'Digital':['Visualization','Design','Media','Digital','Tools'],'Domain':['Core','Domain','Regulation','Certification','Specialty','Vendor','Advanced','Offensive','Defensive','Monitoring','Clinical','Pedagogy']};
+    const relevantCats=catMap[dim]||[];
+    const relevant=required.filter(req=>relevantCats.some(c=>req.cat.includes(c)));
+    if(!relevant.length) return 0;
+    const rel_score=(relevant.filter(req=>matched.includes(req)).length+relevant.filter(req=>partial.includes(req)).length*0.5)/relevant.length;
+    return Math.round(rel_score*role.radar.market[di]);
+  });
+  const sortedMissing=[...missing,...partial].sort((a,b)=>b.demand-a.demand);
+  const phase1=sortedMissing.slice(0,Math.min(4,Math.ceil(sortedMissing.length/3)));
+  const phase2=sortedMissing.slice(phase1.length,phase1.length+Math.min(4,Math.ceil(sortedMissing.length/3)));
+  const phase3=sortedMissing.slice(phase1.length+phase2.length,phase1.length+phase2.length+4);
+  renderResults({score,matched,partial,missing,userRadar,role,phase1,phase2,phase3});
+}
+
+function renderResults({score,matched,partial,missing,userRadar,role,phase1,phase2,phase3}){
+  document.getElementById('empty-state').style.display='none';
+  const results=document.getElementById('results');
+  results.classList.add('visible');
+  const v=score>=70?'strong':score>=40?'moderate':'weak';
+  const vData={strong:{title:`Strong match — ${role.name}`,desc:`You meet ${score}% of the market requirements. You are competitive for this role in Cameroon's job market. Focus on the remaining gaps to maximize your chances.`,color:'var(--green)'},moderate:{title:`Moderate match — ${role.name}`,desc:`You meet ${score}% of requirements. With targeted upskilling on the missing skills, you can become competitive within 1–3 months.`,color:'var(--gold)'},weak:{title:`Significant gap — ${role.name}`,desc:`You meet ${score}% of requirements. This role requires substantial upskilling. Follow the priority roadmap below to build your foundation systematically.`,color:'var(--red)'}};
+  const vi=vData[v];
+  document.getElementById('verdict-banner').innerHTML=`<div class="verdict ${v}"><div class="verdict-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none">${v==='strong'?'<path d="M5 11l4 4 8-8" stroke="'+vi.color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>':v==='moderate'?'<path d="M11 7v5M11 15v1" stroke="'+vi.color+'" stroke-width="2" stroke-linecap="round"/><circle cx="11" cy="11" r="9" stroke="'+vi.color+'" stroke-width="1.5"/>':`<path d="M11 7v5M11 15v1" stroke="${vi.color}" stroke-width="2" stroke-linecap="round"/><path d="M11 2L2 19h18L11 2z" stroke="${vi.color}" stroke-width="1.5" stroke-linejoin="round"/>`}</svg></div><div><div class="verdict-title">${vi.title}</div><div class="verdict-desc">${vi.desc}</div></div></div>`;
+  const total=role.required.length;
+  document.getElementById('srv-num').textContent=score;
+  document.getElementById('score-label').textContent=score>=70?'Strong Readiness':score>=40?'Moderate Readiness':'Low Readiness';
+  document.getElementById('score-sub').textContent=`${matched.length} matched · ${partial.length} partial · ${missing.length} missing`;
+  if(scoreRingChart) scoreRingChart.destroy();
+  const ringColor=score>=70?'#00C46A':score>=40?'#E8B84B':'#E85C5C';
+  scoreRingChart=new Chart(document.getElementById('score-ring').getContext('2d'),{type:'doughnut',data:{datasets:[{data:[score,100-score],backgroundColor:[ringColor,'rgba(255,255,255,0.04)'],borderWidth:0,hoverOffset:0}]},options:{cutout:'78%',responsive:false,animation:{animateRotate:true,duration:1200},plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+  document.getElementById('sm-matched').textContent=matched.length;
+  document.getElementById('sm-matched-sub').textContent=`out of ${total} required skills`;
+  document.getElementById('sm-missing').textContent=missing.length;
+  document.getElementById('sm-missing-sub').textContent=`${partial.length} partial matches`;
+  document.getElementById('sm-demand').textContent=role.marketDemand;
+  setTimeout(()=>{document.getElementById('sm-matched-bar').style.width=(matched.length/total*100)+'%';document.getElementById('sm-missing-bar').style.width=(missing.length/total*100)+'%';document.getElementById('sm-demand-bar').style.width=role.demandBar+'%';},100);
+  if(radarChart) radarChart.destroy();
+  radarChart=new Chart(document.getElementById('radar-chart').getContext('2d'),{type:'radar',data:{labels:role.radar.labels,datasets:[{label:'Market Requirement',data:role.radar.market,borderColor:'rgba(232,184,75,0.7)',backgroundColor:'rgba(232,184,75,0.06)',borderWidth:1.5,pointRadius:3,pointBackgroundColor:'rgba(232,184,75,0.7)'},{label:'Your Profile',data:userRadar,borderColor:'rgba(0,196,106,0.9)',backgroundColor:'rgba(0,196,106,0.1)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#00C46A'}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:1200},scales:{r:{min:0,max:100,ticks:{display:false},grid:{color:'rgba(255,255,255,0.06)'},pointLabels:{color:'#5A7080',font:{size:11,family:"'DM Mono',monospace"}},angleLines:{color:'rgba(255,255,255,0.04)'}}},plugins:{legend:{position:'bottom',labels:{color:'#5A7080',padding:16,font:{size:11}}},tooltip:{backgroundColor:'#0C1220',padding:12}}}});
+  const top10=[...role.required].sort((a,b)=>b.demand-a.demand).slice(0,10);
+  const demandColors=top10.map(s=>matched.includes(s)?'rgba(0,196,106,0.8)':partial.includes(s)?'rgba(232,184,75,0.8)':'rgba(232,92,92,0.6)');
+  if(demandChart) demandChart.destroy();
+  demandChart=new Chart(document.getElementById('demand-chart').getContext('2d'),{type:'bar',data:{labels:top10.map(s=>s.name),datasets:[{label:'Market Demand (%)',data:top10.map(s=>s.demand),backgroundColor:demandColors,borderRadius:4,barPercentage:0.65}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:1400},plugins:{legend:{display:false},tooltip:{backgroundColor:'#0C1220',padding:10,callbacks:{label:ctx=>`${ctx.raw}% demand · ${matched.find(s=>s.name===top10[ctx.dataIndex].name)?'You have this':partial.find(s=>s.name===top10[ctx.dataIndex].name)?'Partial match':'Missing'}`}}},scales:{x:{max:100,ticks:{callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.04)'}},y:{grid:{display:false},ticks:{font:{size:11},color:'#5A7080'}}}}});
+  document.getElementById('match-role-label').textContent=`${role.required.length} required skills for ${role.name}`;
+  const allSorted=[...role.required].sort((a,b)=>b.demand-a.demand);
+  const matchData=allSorted.map(s=>matched.includes(s)?s.demand:partial.includes(s)?s.demand*0.5:0);
+  const matchColors=allSorted.map(s=>matched.includes(s)?'rgba(0,196,106,0.75)':partial.includes(s)?'rgba(232,184,75,0.7)':'rgba(232,92,92,0.35)');
+  if(matchChart) matchChart.destroy();
+  matchChart=new Chart(document.getElementById('match-chart').getContext('2d'),{type:'bar',data:{labels:allSorted.map(s=>s.name),datasets:[{label:'Your Match',data:matchData,backgroundColor:matchColors,borderRadius:3,barPercentage:0.7},{label:'Required',data:allSorted.map(s=>s.demand),backgroundColor:'rgba(255,255,255,0.04)',borderRadius:3,barPercentage:0.7}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:1600},plugins:{legend:{position:'bottom',labels:{color:'#5A7080',padding:12,font:{size:11}}},tooltip:{backgroundColor:'#0C1220',padding:10,callbacks:{label:ctx=>{const s=allSorted[ctx.dataIndex];if(ctx.datasetIndex===0) return `Your match: ${matched.includes(s)?'Full ('+s.demand+'%)':partial.includes(s)?'Partial (~'+Math.round(s.demand*0.5)+'%)':'0% (Missing)'}`;return `Required: ${s.demand}% market demand`;}}}},scales:{x:{max:100,ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#5A7080'}}}}});
+  document.querySelector('.md-chart-wrap').style.height=Math.max(340,allSorted.length*26)+'px';
+  const allTags=[...matched.map(s=>`<span class="sk-tag have" style="animation-delay:${Math.random()*0.4}s"><span class="sk-dot" style="background:var(--green)"></span>${s.name}</span>`),...partial.map(s=>`<span class="sk-tag partial" style="animation-delay:${Math.random()*0.4}s"><span class="sk-dot" style="background:var(--gold)"></span>${s.name}</span>`),...missing.map(s=>`<span class="sk-tag miss" style="animation-delay:${Math.random()*0.4}s"><span class="sk-dot" style="background:var(--red)"></span>${s.name}</span>`)];
+  document.getElementById('tags-all').innerHTML=allTags.join('');
+  document.getElementById('tags-have').innerHTML=[...matched.map(s=>`<span class="sk-tag have"><span class="sk-dot" style="background:var(--green)"></span>${s.name}</span>`),...partial.map(s=>`<span class="sk-tag partial"><span class="sk-dot" style="background:var(--gold)"></span>${s.name}</span>`)].join('')||'<span style="font-size:13px;color:var(--muted)">No matched skills yet.</span>';
+  document.getElementById('tags-miss').innerHTML=missing.map(s=>`<span class="sk-tag miss"><span class="sk-dot" style="background:var(--red)"></span>${s.name}</span>`).join('')||'<span style="font-size:13px;color:var(--green)">All skills matched.</span>';
+  const phaseData=[{cls:'p1',num:'PHASE 01 — CRITICAL',title:'High Priority (Learn First)',skills:phase1},{cls:'p2',num:'PHASE 02 — IMPORTANT',title:'Medium Priority',skills:phase2},{cls:'p3',num:'PHASE 03 — ADVANTAGEOUS',title:'Bonus Skills',skills:phase3}];
+  document.getElementById('roadmap-grid').innerHTML=phaseData.map(ph=>`<div class="rm-phase ${ph.cls}"><div class="rmp-num">${ph.num}</div><div class="rmp-title">${ph.title}</div><div class="rmp-skills">${ph.skills.length?ph.skills.map(s=>`<div class="rmp-skill"><span>${s.name}</span><span class="rmp-importance">${s.demand}%</span></div>`).join(''):'<div style="font-size:13px;color:var(--muted);padding:8px 0">Nothing needed here.</div>'}</div></div>`).join('');
+  setTimeout(()=>document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
+function switchSkillTab(id,el){
+  document.querySelectorAll('.sb-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.sb-content').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('sbt-'+id).classList.add('active');
+}
+
+init();
+</script>
+
+<!-- Floating AI Button -->
+<div class="floating-ai-btn" id="floatingAIBtn" onclick="window.location.href='ai-chat.html'" title="Chat with AI">
+    <img src="LOGO.jpg" alt="SkillSync AI Assistant">
+    <span class="floating-ai-text">
+        <span>🤖 Chat with AI</span>
+        <span class="text-arrow">→</span>
+    </span>
+    <span class="floating-ai-badge">AI</span>
+    <span class="floating-ai-status"></span>
+</div>
+
+<script>
+    // Trigger vibration animation on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const aiBtn = document.getElementById('floatingAIBtn');
+        
+        // Hide on AI page
+        if (window.location.pathname.includes('ai-chat.html')) {
+            aiBtn.style.display = 'none';
+            return;
+        }
+        
+        // Add vibrate class to start animation
+        aiBtn.classList.add('vibrate');
+        
+        // Remove vibration class after 4 seconds (when animation ends)
+        setTimeout(function() {
+            aiBtn.classList.remove('vibrate');
+        }, 4000);
+    });
+</script>
+
+
+
+
+</body>
+</html>

@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillSync CM — Opportunities Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+<!-- ══ FIREBASE SDK ══ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, doc,
+  setDoc, getDoc, getDocs,
+  deleteDoc, onSnapshot,
+  serverTimestamp, query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ─────────────────────────────────────────────
+   🔥 REPLACE WITH YOUR FIREBASE CONFIG
+   Go to console.firebase.google.com → Project Settings → Your apps → SDK setup
+   ───────────────────────────────────────────── */
+const firebaseConfig = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+/* ─────────────────────────────────────────────
+   FIRESTORE SUBSCRIBER API
+   Collection: "subscribers"
+   Document ID = email (sanitised)
+   ───────────────────────────────────────────── */
+
+// Sanitise email so it can be a Firestore doc ID
+function emailToId(email) {
+  return email.toLowerCase().trim().replace(/[.#$[\]\/]/g, '_');
+}
+
+// Add subscriber — returns { ok, alreadyExists }
+async function fsAddSubscriber(email, name = '') {
+  const id  = emailToId(email);
+  const ref = doc(db, 'subscribers', id);
+  const snap = await getDoc(ref);
+  if (snap.exists()) return { ok: false, alreadyExists: true };
+  await setDoc(ref, {
+    email:     email.toLowerCase().trim(),
+    name:      name || email.split('@')[0],
+    createdAt: serverTimestamp(),
+    active:    true
+  });
+  return { ok: true, alreadyExists: false };
+}
+
+// Remove subscriber
+async function fsRemoveSubscriber(email) {
+  const id  = emailToId(email);
+  await deleteDoc(doc(db, 'subscribers', id));
+}
+
+// Get all active subscriber emails (one-shot)
+async function fsGetAllEmails() {
+  const snap = await getDocs(collection(db, 'subscribers'));
+  return snap.docs
+    .map(d => d.data())
+    .filter(d => d.active !== false)
+    .map(d => ({ email: d.email, name: d.name || '' }));
+}
+
+// Real-time count listener — calls back with number
+function fsWatchCount(cb) {
+  return onSnapshot(collection(db, 'subscribers'), snap => cb(snap.size));
+}
+
+// Expose to non-module scope
+window._fs = { fsAddSubscriber, fsRemoveSubscriber, fsGetAllEmails, fsWatchCount };
+window._fsReady = true;
+window.dispatchEvent(new Event('fsReady'));
+</script>
+
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04080F;--s1:#0A1020;--s2:#0F1828;--s3:#141f30;
+  --b0:rgba(255,255,255,0.03);--b1:rgba(255,255,255,0.07);--b2:rgba(255,255,255,0.13);
+  --green:#00C46A;--green-lo:rgba(0,196,106,0.08);--green-mid:rgba(0,196,106,0.18);
+  --gold:#E8B84B;--gold-lo:rgba(232,184,75,0.08);
+  --red:#E85C5C;--red-lo:rgba(232,92,92,0.08);
+  --blue:#5C9EE8;--purple:#9B6EE8;--teal:#00C4B0;
+  --white:#EEF4FA;--text:#B8CDD8;--muted:#4E6272;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;line-height:1.6;overflow-x:hidden;min-height:100vh}
+
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,196,106,0.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,196,106,0.025) 1px,transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(ellipse 90% 70% at 50% 0%,black 20%,transparent 100%);
+}
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 800px 500px at 80% -10%,rgba(0,196,106,0.055) 0%,transparent 60%),
+    radial-gradient(ellipse 600px 400px at 10% 90%,rgba(232,184,75,0.04) 0%,transparent 60%);
+}
+
+/* ── NAV ── */
+nav{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 52px;height:66px;
+  background:rgba(4,8,15,0.0);backdrop-filter:blur(0);
+  border-bottom:1px solid transparent;
+  transition:all 0.4s ease;
+}
+nav.scrolled{background:rgba(4,8,15,0.94);backdrop-filter:blur(24px);border-color:var(--b1)}
+.nav-logo{display:flex;align-items:baseline;gap:1px;font-family:'Playfair Display',serif;font-weight:900;font-size:21px;text-decoration:none;letter-spacing:-0.5px}
+.nl1{color:var(--white)}.nl2{color:var(--green)}.nl3{color:var(--gold);font-size:17px;margin-left:4px}
+.nav-badge{font-size:10px;font-weight:600;letter-spacing:1px;background:rgba(0,196,106,0.1);border:1px solid rgba(0,196,106,0.2);color:var(--green);padding:2px 8px;border-radius:100px;margin-left:10px;font-family:'DM Mono',monospace}
+.nav-links{display:flex;align-items:center;gap:30px;list-style:none}
+.nav-links a{font-size:13px;font-weight:500;color:rgba(238,244,250,0.6);text-decoration:none;transition:color 0.2s}
+.nav-links a:hover{color:var(--white)}
+.nav-links a.active{color:var(--green)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.btn-ghost{font-size:13px;font-weight:500;color:rgba(238,244,250,0.6);background:none;border:none;cursor:pointer;padding:8px 14px;border-radius:6px;transition:all 0.2s;font-family:'Outfit',sans-serif}
+.btn-ghost:hover{color:var(--white);background:var(--b0)}
+.btn-green{background:var(--green);color:#000;border:none;cursor:pointer;padding:9px 20px;border-radius:7px;font-weight:600;font-size:13px;transition:all 0.2s;font-family:'Outfit',sans-serif}
+.btn-green:hover{background:#00d474;transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,196,106,0.3)}
+.bookmark-btn{position:relative;background:none;border:none;cursor:pointer;color:rgba(238,244,250,0.5);padding:8px;transition:color 0.2s}
+.bookmark-btn:hover{color:var(--white)}
+.bookmark-badge{position:absolute;top:-2px;right:-2px;width:16px;height:16px;border-radius:50%;background:#E85C5C;font-size:9px;font-weight:700;color:#fff;display:none;align-items:center;justify-content:center;font-family:'DM Mono',monospace}
+.bookmark-badge.show{display:flex}
+
+/* Subscriber count pill (live) */
+.sub-count-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(0,196,106,0.08);border:1px solid rgba(0,196,106,0.18);
+  border-radius:100px;padding:4px 12px;
+  font-size:11px;font-weight:600;color:var(--green);
+  font-family:'DM Mono',monospace;cursor:default;
+  transition:opacity .3s;
+}
+.sub-count-pill .sc-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:scPulse 2s infinite}
+@keyframes scPulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── HERO ── */
+.hero{position:relative;z-index:1;padding:80px 52px 40px;max-width:1320px;margin:0 auto;text-align:center}
+.hero-chip{display:inline-flex;align-items:center;gap:8px;background:rgba(0,196,106,0.08);border:1px solid rgba(0,196,106,0.2);border-radius:100px;padding:6px 16px 6px 8px;margin-bottom:28px;opacity:0;animation:fadeUp 0.7s ease 0.1s forwards}
+.chip-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:dotPulse 2s infinite}
+@keyframes dotPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+.chip-text{font-size:12px;font-weight:500;color:var(--green);letter-spacing:0.5px}
+.hero-title{font-family:'Playfair Display',serif;font-size:clamp(42px,6vw,76px);font-weight:900;line-height:1.06;letter-spacing:-2.5px;color:var(--white);margin-bottom:20px;opacity:0;animation:fadeUp 0.8s ease 0.2s forwards}
+.hero-title .acc{color:var(--green)}
+.hero-title .acc-gold{background:linear-gradient(135deg,var(--gold),#f5d080);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-desc{font-size:17px;color:var(--muted);max-width:600px;margin:0 auto 36px;line-height:1.75;font-weight:300;opacity:0;animation:fadeUp 0.7s ease 0.35s forwards}
+.hero-actions{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;opacity:0;animation:fadeUp 0.7s ease 0.45s forwards}
+@keyframes fadeUp{to{opacity:1;transform:translateY(0)}from{opacity:0;transform:translateY(18px)}}
+
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;max-width:1320px;margin:0 auto;padding:0 52px;background:var(--b0);border-radius:16px;overflow:hidden;border:1px solid var(--b1);opacity:0;animation:fadeUp 0.7s ease 0.55s forwards}
+.stat-cell{background:var(--s1);padding:22px 20px;text-align:center;border-right:1px solid var(--b1);transition:background 0.2s}
+.stat-cell:last-child{border-right:none}
+.stat-cell:hover{background:var(--b0)}
+.stat-num{font-family:'Playfair Display',serif;font-size:30px;font-weight:700;color:var(--white);line-height:1;margin-bottom:4px}
+.stat-num.g{color:var(--green)}.stat-num.gold{color:var(--gold)}.stat-num.b{color:var(--blue)}.stat-num.p{color:var(--purple)}.stat-num.r{color:var(--red)}
+.stat-label{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace}
+
+/* ── MAIN LAYOUT ── */
+.main-wrap{max-width:1320px;margin:0 auto;padding:40px 52px 80px;position:relative;z-index:1}
+
+/* ── FILTER BAR ── */
+.filter-bar{background:var(--s1);border:1px solid var(--b1);border-radius:16px;padding:24px;margin-bottom:32px}
+.filter-top{display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:240px}
+.search-icon{position:absolute;top:50%;left:14px;transform:translateY(-50%);color:var(--muted)}
+.search-input{width:100%;background:var(--bg);border:1px solid var(--b2);border-radius:9px;padding:11px 14px 11px 42px;color:var(--white);font-family:'Outfit',sans-serif;font-size:13.5px;outline:none;transition:border-color 0.2s}
+.search-input::placeholder{color:var(--muted)}
+.search-input:focus{border-color:rgba(0,196,106,0.4)}
+.filter-select{background:var(--bg);border:1px solid var(--b2);border-radius:9px;padding:11px 14px;color:var(--text);font-family:'Outfit',sans-serif;font-size:13px;outline:none;cursor:pointer;transition:border-color 0.2s;appearance:none;min-width:150px}
+.filter-select:focus{border-color:rgba(0,196,106,0.3)}
+.filter-pills{display:flex;gap:8px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--b1)}
+.pill{padding:7px 16px;border-radius:100px;font-size:12px;font-weight:600;background:var(--b0);border:1px solid var(--b1);color:var(--muted);cursor:pointer;transition:all 0.2s;font-family:'Outfit',sans-serif}
+.pill:hover{border-color:var(--b2);color:var(--text)}
+.pill.active{background:var(--green-lo);border-color:var(--green-mid);color:var(--green)}
+
+/* ── OPP GRID ── */
+.opp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:1000px){.opp-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.opp-grid{grid-template-columns:1fr}}
+.opp-card{background:var(--s1);border:1px solid var(--b1);border-radius:16px;overflow:hidden;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);opacity:0;transform:translateY(20px);position:relative}
+.opp-card.visible{opacity:1;transform:translateY(0)}
+.opp-card:hover{border-color:var(--b2);transform:translateY(-6px);box-shadow:0 24px 48px rgba(0,0,0,0.4)}
+.card-img{width:100%;height:180px;object-fit:cover;display:block;filter:brightness(0.82) saturate(1.1);transition:transform 0.5s ease,filter 0.3s ease}
+.opp-card:hover .card-img{transform:scale(1.05);filter:brightness(0.9) saturate(1.2)}
+.card-img-wrap{overflow:hidden;position:relative}
+.card-strip{height:2px;width:100%}
+.strip-internship{background:var(--green)}.strip-scholarship{background:var(--gold)}.strip-hackathon{background:var(--blue)}.strip-competition{background:var(--purple)}.strip-bootcamp{background:var(--red)}
+.card-bookmark{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:8px;background:rgba(4,8,15,0.75);backdrop-filter:blur(8px);border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);transition:all 0.2s;z-index:2}
+.card-bookmark:hover{color:var(--white);border-color:var(--b2)}
+.card-bookmark.saved{color:var(--green);border-color:rgba(0,196,106,0.3);background:rgba(0,196,106,0.1)}
+.card-body{padding:20px}
+.card-meta{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.type-badge{font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:3px 9px;border-radius:100px;font-family:'DM Mono',monospace}
+.tb-internship{background:rgba(0,196,106,0.1);color:var(--green);border:1px solid rgba(0,196,106,0.2)}
+.tb-scholarship{background:rgba(232,184,75,0.1);color:var(--gold);border:1px solid rgba(232,184,75,0.2)}
+.tb-hackathon{background:rgba(92,158,232,0.1);color:var(--blue);border:1px solid rgba(92,158,232,0.2)}
+.tb-competition{background:rgba(155,110,232,0.1);color:var(--purple);border:1px solid rgba(155,110,232,0.2)}
+.tb-bootcamp{background:rgba(232,92,92,0.1);color:var(--red);border:1px solid rgba(232,92,92,0.2)}
+.urgent-badge{font-size:10px;color:var(--red);font-family:'DM Mono',monospace}
+.days-badge{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-left:auto}
+.card-title{font-size:16px;font-weight:700;color:var(--white);margin-bottom:4px;line-height:1.35}
+.card-org{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.card-desc{font-size:13px;color:var(--text);line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-footer{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--b1);margin-top:14px}
+.card-location{font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace}
+.card-cta{font-size:12px;font-weight:600;color:var(--green);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:5px;transition:gap 0.2s;font-family:'Outfit',sans-serif}
+.card-cta:hover{gap:8px}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:80px 40px;background:var(--s1);border:1px dashed var(--b2);border-radius:16px;display:none}
+.empty-icon{width:56px;height:56px;border-radius:50%;background:var(--b0);border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.empty-title{font-size:16px;font-weight:600;color:var(--white);margin-bottom:6px}
+.empty-desc{font-size:13px;color:var(--muted)}
+
+/* ── MODALS ── */
+.modal-overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.88);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--s2);border:1px solid var(--b2);border-radius:20px;width:100%;position:relative;animation:scaleIn 0.3s cubic-bezier(0.16,1,0.3,1);box-shadow:0 40px 80px rgba(0,0,0,0.6)}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.94)}to{opacity:1;transform:scale(1)}}
+.modal-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:8px;background:var(--b1);border:1px solid var(--b2);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;z-index:1}
+.modal-close:hover{background:var(--b2);color:var(--white)}
+.modal-header{padding:24px 24px 0;border-bottom:1px solid var(--b1);padding-bottom:18px}
+.modal-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--white)}
+.modal-body{padding:24px;max-height:70vh;overflow-y:auto}
+.modal-body::-webkit-scrollbar{width:4px}
+.modal-body::-webkit-scrollbar-track{background:transparent}
+.modal-body::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--b1);display:flex;gap:10px;justify-content:flex-end}
+
+/* Detail modal */
+.detail-img{width:100%;height:220px;object-fit:cover;border-radius:16px 16px 0 0;display:block}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.detail-field{background:var(--b0);border:1px solid var(--b1);border-radius:10px;padding:14px}
+.df-label{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-family:'DM Mono',monospace}
+.df-val{font-size:14px;font-weight:600;color:var(--white)}
+
+/* Forms */
+.form-group{margin-bottom:18px}
+.form-label{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:7px;font-family:'DM Mono',monospace}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--bg);border:1px solid var(--b2);border-radius:9px;padding:11px 14px;color:var(--white);font-family:'Outfit',sans-serif;font-size:13.5px;outline:none;transition:border-color 0.2s}
+.form-input::placeholder,.form-textarea::placeholder{color:var(--muted)}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:rgba(0,196,106,0.4)}
+.form-textarea{resize:none;height:90px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.upload-zone{background:var(--bg);border:1px dashed var(--b2);border-radius:9px;padding:24px;text-align:center;cursor:pointer;transition:border-color 0.2s}
+.upload-zone:hover{border-color:rgba(0,196,106,0.4)}
+.upload-label{font-size:12px;color:var(--muted);margin-top:6px}
+.image-preview-wrap{margin-top:10px;display:none}
+.image-preview-wrap img{width:100%;height:100px;object-fit:cover;border-radius:8px}
+
+/* Subscribe modal */
+.sub-modal{max-width:460px;text-align:center}
+.sub-icon{width:64px;height:64px;border-radius:50%;background:rgba(0,196,106,0.1);border:1px solid rgba(0,196,106,0.2);display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+.sub-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--white);margin-bottom:8px}
+.sub-desc{font-size:14px;color:var(--muted);margin-bottom:24px;line-height:1.65}
+.sub-features{display:flex;flex-direction:column;gap:8px;margin-bottom:24px;text-align:left}
+.sub-feat{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);padding:10px 14px;background:var(--b0);border-radius:8px;border:1px solid var(--b1)}
+.sub-feat-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+
+/* Firestore status badge inside subscribe modal */
+.fs-status{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:11px;color:var(--muted);
+  background:var(--b0);border:1px solid var(--b1);
+  border-radius:100px;padding:4px 12px;margin-bottom:16px;
+  font-family:'DM Mono',monospace;
+}
+.fs-status.connected{color:var(--green);border-color:rgba(0,196,106,0.2);background:rgba(0,196,106,0.06)}
+.fs-status.error{color:var(--red);border-color:rgba(232,92,92,0.2);background:var(--red-lo)}
+.fs-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+/* Subscriber admin panel inside subscribe modal */
+.admin-toggle{font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;margin-top:8px;font-family:'DM Mono',monospace;text-decoration:underline;transition:color .2s}
+.admin-toggle:hover{color:var(--white)}
+.admin-panel{margin-top:14px;background:var(--bg);border:1px solid var(--b1);border-radius:10px;padding:14px;text-align:left;display:none}
+.admin-panel.show{display:block}
+.admin-list{max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.admin-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--b0);border-radius:6px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text)}
+.admin-item span{flex:1}
+.admin-del{background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;transition:color .15s;line-height:1}
+.admin-del:hover{color:var(--red)}
+.admin-empty{font-size:12px;color:var(--muted);padding:10px 0;text-align:center}
+
+/* Contact modal */
+.contact-item{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--b0);border:1px solid var(--b1);border-radius:10px;margin-bottom:10px;transition:all 0.2s}
+.contact-item:hover{background:var(--b1);transform:translateX(4px)}
+.contact-icon{width:36px;height:36px;border-radius:8px;background:rgba(0,196,106,0.1);border:1px solid rgba(0,196,106,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.contact-text{flex:1;font-size:13px;color:var(--text)}
+.copy-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;transition:color 0.2s}
+.copy-btn:hover{color:var(--green)}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;z-index:400;background:var(--s2);border:1px solid var(--b2);border-radius:10px;padding:12px 20px;font-size:13.5px;font-weight:500;color:var(--white);box-shadow:0 16px 40px rgba(0,0,0,0.4);animation:toastIn 0.3s ease}
+.toast.success{border-color:rgba(0,196,106,0.3);color:var(--green)}
+.toast.error{border-color:rgba(232,92,92,0.3);color:var(--red)}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,0.2);border-top-color:#000;border-radius:50%;animation:spin 0.6s linear infinite;margin-right:6px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--green);color:#000;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Outfit',sans-serif}
+.btn-primary:hover{background:#00d474;transform:translateY(-1px);box-shadow:0 10px 28px rgba(0,196,106,0.3)}
+.btn-outline{display:inline-flex;align-items:center;gap:8px;background:none;color:var(--text);border:1px solid var(--b2);padding:12px 22px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;font-family:'Outfit',sans-serif}
+.btn-outline:hover{border-color:var(--b2);background:var(--b0);color:var(--white)}
+.btn-submit{width:100%;background:var(--green);color:#000;border:none;border-radius:9px;padding:14px;font-size:14.5px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:'Outfit',sans-serif;margin-top:4px}
+.btn-submit:hover{background:#00d474;transform:translateY(-1px)}
+.btn-submit:disabled{background:var(--s3);color:var(--muted);cursor:not-allowed;transform:none}
+
+footer{border-top:1px solid var(--b1);padding:28px 52px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.footer-logo{font-family:'Playfair Display',serif;font-size:17px;font-weight:900;letter-spacing:-0.5px}
+.fl1{color:var(--white)}.fl2{color:var(--green)}.fl3{color:var(--gold)}
+.footer-copy{font-size:12px;color:var(--muted)}
+.footer-links{display:flex;gap:20px}
+.footer-links a{font-size:12px;color:var(--muted);text-decoration:none;transition:color 0.2s}
+.footer-links a:hover{color:var(--white)}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
+
+
+
+
+/* Floating AI Button */
+.floating-ai-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.4);
+    cursor: pointer;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+    padding: 0;
+}
+
+.floating-ai-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.floating-ai-btn:hover {
+    transform: scale(1.1) rotate(-5deg);
+    box-shadow: 0 12px 48px rgba(16, 185, 129, 0.6);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.floating-ai-btn:active {
+    transform: scale(0.95);
+}
+
+/* ===== VIBRATION + ROTATION ANIMATION ===== */
+.floating-ai-btn.vibrate {
+    animation: vibrateRotate 4s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+}
+
+@keyframes vibrateRotate {
+    /* Vibration Phase - First 2 seconds */
+    0% { transform: translateX(0) rotate(0deg); }
+    5% { transform: translateX(-6px) rotate(-8deg); }
+    10% { transform: translateX(6px) rotate(8deg); }
+    15% { transform: translateX(-6px) rotate(-8deg); }
+    20% { transform: translateX(6px) rotate(8deg); }
+    25% { transform: translateX(-4px) rotate(-5deg); }
+    30% { transform: translateX(4px) rotate(5deg); }
+    35% { transform: translateX(-3px) rotate(-3deg); }
+    40% { transform: translateX(3px) rotate(3deg); }
+    45% { transform: translateX(-2px) rotate(-2deg); }
+    50% { transform: translateX(0) rotate(0deg); }
+    
+    /* Rotation Phase - Next 1.5 seconds */
+    55% { transform: translateX(0) rotate(-10deg) scale(1.05); }
+    60% { transform: translateX(0) rotate(10deg) scale(1.08); }
+    65% { transform: translateX(0) rotate(-8deg) scale(1.05); }
+    70% { transform: translateX(0) rotate(8deg) scale(1.02); }
+    75% { transform: translateX(0) rotate(-5deg) scale(1); }
+    80% { transform: translateX(0) rotate(5deg) scale(1); }
+    85% { transform: translateX(0) rotate(-3deg); }
+    90% { transform: translateX(0) rotate(3deg); }
+    95% { transform: translateX(0) rotate(-1deg); }
+    100% { transform: translateX(0) rotate(0deg); }
+}
+
+/* Pulse Ring Animation (increases during vibration) */
+.floating-ai-btn.vibrate::before {
+    animation: pulseRingFast 2s ease-out infinite;
+}
+
+@keyframes pulseRingFast {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(2); opacity: 0; }
+}
+
+.floating-ai-btn.vibrate::after {
+    animation: glowPulseFast 1.5s ease-in-out infinite;
+}
+
+@keyframes glowPulseFast {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.5); opacity: 1; }
+}
+
+/* Regular pulse after animation */
+.floating-ai-btn::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid rgba(16, 185, 129, 0.3);
+    animation: pulseRing 3s ease-out infinite;
+}
+
+@keyframes pulseRing {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+.floating-ai-btn::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.15), transparent 70%);
+    animation: glowPulse 3s ease-in-out infinite;
+    z-index: -1;
+}
+
+@keyframes glowPulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* ===== CHAT TEXT ===== */
+.floating-ai-text {
+    position: absolute;
+    right: 80px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 8px 16px 8px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.floating-ai-text .text-arrow {
+    display: inline-block;
+    animation: textArrow 1.5s ease-in-out infinite;
+}
+
+@keyframes textArrow {
+    0%, 100% { transform: translateX(0); opacity: 0.6; }
+    50% { transform: translateX(5px); opacity: 1; }
+}
+
+.floating-ai-text::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left: 8px solid rgba(15, 23, 42, 0.95);
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+}
+
+.floating-ai-btn:hover .floating-ai-text {
+    opacity: 1;
+    transform: translateY(-50%) translateX(-8px);
+}
+
+/* Badge */
+.floating-ai-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #ef4444;
+    color: white;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: 50%;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    border: 2px solid #030712;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Status indicator */
+.floating-ai-status {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 16px;
+    height: 16px;
+    background: #10b981;
+    border-radius: 50%;
+    border: 2px solid #030712;
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+    .floating-ai-btn {
+        width: 60px;
+        height: 60px;
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .floating-ai-text {
+        display: none;
+    }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="skillsync-home.html" class="nav-logo">
+    <span class="nl1">Skill</span><span class="nl2">Sync</span><span class="nl3">CM</span>
+    <span class="nav-badge">Beta</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="skillsync-home.html">Home</a></li>
+    <li><a href="skillsync-skill-gap.html">Skill Analyzer</a></li>
+    <li><a href="#" class="active">Opportunities</a></li>
+  </ul>
+  <div class="nav-right">
+    <!-- Live subscriber count from Firestore -->
+    <div class="sub-count-pill" id="subCountPill" title="Total global subscribers">
+      <span class="sc-dot"></span>
+      <span id="subCountVal">—</span> subscribers
+    </div>
+    <button class="bookmark-btn" onclick="openSaved()" title="Saved opportunities">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 2h10a1 1 0 011 1v13l-6-3-6 3V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      <div class="bookmark-badge" id="bookmark-badge">0</div>
+    </button>
+    <button class="btn-ghost" onclick="openSubscribe()">Subscribe</button>
+    <button class="btn-green" onclick="openPostModal()">Post Opportunity</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-chip">
+    <div class="chip-dot"></div>
+    <span class="chip-text">Live Opportunities Network — Cameroon</span>
+  </div>
+  <h1 class="hero-title">
+    Discover Your<br><span class="acc">Next</span> <span class="acc-gold">Opportunity</span>
+  </h1>
+  <p class="hero-desc">
+    Verified internships, fully funded scholarships, hackathons, competitions, and bootcamps — curated specifically for Cameroonian talent.
+  </p>
+  <div class="hero-actions">
+    <button class="btn-primary" onclick="document.querySelector('.main-wrap').scrollIntoView({behavior:'smooth'})">
+      Browse All
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="btn-outline" onclick="openSubscribe()">Get Email Alerts</button>
+  </div>
+</div>
+
+<!-- STATS ROW -->
+<div style="max-width:1320px;margin:0 auto;padding:0 52px 40px;position:relative;z-index:1">
+  <div class="stats-row">
+    <div class="stat-cell"><div class="stat-num g" id="stat-total">0</div><div class="stat-label">Total Active</div></div>
+    <div class="stat-cell"><div class="stat-num" id="stat-intern">0</div><div class="stat-label">Internships</div></div>
+    <div class="stat-cell"><div class="stat-num gold" id="stat-scholar">0</div><div class="stat-label">Scholarships</div></div>
+    <div class="stat-cell"><div class="stat-num b" id="stat-hack">0</div><div class="stat-label">Hackathons</div></div>
+    <div class="stat-cell"><div class="stat-num r" id="stat-boot">0</div><div class="stat-label">Bootcamps</div></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-wrap">
+  <div class="filter-bar">
+    <div class="filter-top">
+      <div class="search-wrap">
+        <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <input class="search-input" id="search-input" type="text" placeholder="Search by title or organization...">
+      </div>
+      <select class="filter-select" id="loc-filter">
+        <option value="all">All Locations</option>
+        <option value="Douala">Douala</option>
+        <option value="Yaoundé">Yaoundé</option>
+        <option value="Buea">Buea</option>
+        <option value="Remote">Remote</option>
+      </select>
+      <select class="filter-select" id="sort-select">
+        <option value="latest">Latest First</option>
+        <option value="soonest">Closing Soonest</option>
+        <option value="newest">Newly Added</option>
+      </select>
+    </div>
+    <div class="filter-pills" id="filter-pills">
+      <button class="pill active" data-filter="all">All</button>
+      <button class="pill" data-filter="internship">Internships</button>
+      <button class="pill" data-filter="scholarship">Scholarships</button>
+      <button class="pill" data-filter="hackathon">Hackathons</button>
+      <button class="pill" data-filter="competition">Competitions</button>
+      <button class="pill" data-filter="bootcamp">Bootcamps</button>
+    </div>
+  </div>
+
+  <div class="opp-grid" id="opp-grid"></div>
+  <div class="empty-state" id="empty-state">
+    <div class="empty-icon">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="3" width="16" height="16" rx="2" stroke="var(--muted)" stroke-width="1.4"/><path d="M8 11h6M11 8v6" stroke="var(--muted)" stroke-width="1.4" stroke-linecap="round"/></svg>
+    </div>
+    <div class="empty-title">No matching opportunities</div>
+    <div class="empty-desc">Try adjusting your filters or search query.</div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-logo"><span class="fl1">Skill</span><span class="fl2">Sync</span><span class="fl3"> CM</span></div>
+  <div class="footer-copy">Where Talent Meets Opportunity — Cameroon © 2025</div>
+  <div class="footer-links">
+    <a href="skillsync-home.html">Home</a>
+    <a href="skillsync-skill-gap.html">Skill Analyzer</a>
+    <a href="#">About</a>
+  </div>
+</footer>
+
+<!-- ═══════════ MODALS ═══════════ -->
+
+<!-- DETAIL -->
+<div class="modal-overlay" id="modal-details">
+  <div class="modal" style="max-width:520px">
+    <button class="modal-close" onclick="closeModal('modal-details')"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <img id="dm-img" class="detail-img" src="" alt="">
+    <div class="modal-body">
+      <div class="card-meta" style="margin-bottom:10px"><span id="dm-badge" class="type-badge"></span><span id="dm-days" class="days-badge"></span></div>
+      <div class="modal-title" style="font-size:22px;margin-bottom:4px" id="dm-title"></div>
+      <div style="font-size:13px;color:var(--green);margin-bottom:16px;font-family:'DM Mono',monospace" id="dm-org"></div>
+      <div class="detail-grid">
+        <div class="detail-field"><div class="df-label">Location</div><div class="df-val" id="dm-loc"></div></div>
+        <div class="detail-field"><div class="df-label">Deadline</div><div class="df-val" id="dm-dead"></div></div>
+        <div class="detail-field"><div class="df-label">Benefits</div><div class="df-val" id="dm-ben" style="font-size:13px;font-weight:500"></div></div>
+        <div class="detail-field"><div class="df-label">Requirements</div><div class="df-val" id="dm-req" style="font-size:13px;font-weight:500"></div></div>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace">Description</div>
+      <div style="font-size:14px;color:var(--text);line-height:1.7" id="dm-desc"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('modal-details')">Close</button>
+      <button class="btn-primary" id="dm-apply-btn">Apply Now</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT -->
+<div class="modal-overlay" id="modal-contact">
+  <div class="modal" style="max-width:400px">
+    <button class="modal-close" onclick="closeModal('modal-contact')"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <div class="modal-header"><div class="modal-title">Contact Details</div></div>
+    <div class="modal-body" id="contact-body"></div>
+    <div class="modal-footer"><button class="btn-outline" onclick="closeModal('modal-contact')">Close</button></div>
+  </div>
+</div>
+
+<!-- POST -->
+<div class="modal-overlay" id="modal-post">
+  <div class="modal" style="max-width:500px">
+    <button class="modal-close" onclick="closeModal('modal-post')"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <div class="modal-header"><div class="modal-title">Post New Opportunity</div></div>
+    <div class="modal-body">
+      <form id="post-form" onsubmit="handlePost(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select class="form-select" id="f-type" required>
+              <option value="internship">Internship</option>
+              <option value="scholarship">Scholarship</option>
+              <option value="hackathon">Hackathon</option>
+              <option value="competition">Competition</option>
+              <option value="bootcamp">Bootcamp</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Location</label>
+            <select class="form-select" id="f-loc" required>
+              <option value="Douala">Douala</option>
+              <option value="Yaoundé">Yaoundé</option>
+              <option value="Buea">Buea</option>
+              <option value="Remote">Remote</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label">Title</label><input class="form-input" id="f-title" type="text" placeholder="e.g. Software Engineering Intern" required></div>
+        <div class="form-group"><label class="form-label">Organization</label><input class="form-input" id="f-org" type="text" placeholder="e.g. MTN Cameroon" required></div>
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Days Until Deadline</label><input class="form-input" id="f-days" type="number" min="1" placeholder="e.g. 30" required></div>
+          <div class="form-group"><label class="form-label">Benefits</label><input class="form-input" id="f-benefits" type="text" placeholder="e.g. 150,000 FCFA/month"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="f-desc" placeholder="Brief description..." required></textarea></div>
+        <div class="form-group">
+          <label class="form-label">Application Method</label>
+          <select class="form-select" id="f-method" onchange="toggleApplyMethod()">
+            <option value="link">External Link</option>
+            <option value="contact">Contact Details</option>
+          </select>
+        </div>
+        <div class="form-group" id="f-link-wrap"><label class="form-label">Application URL</label><input class="form-input" id="f-url" type="url" placeholder="https://..."></div>
+        <div class="form-group" id="f-contact-wrap" style="display:none"><label class="form-label">Contact Details</label><textarea class="form-textarea" id="f-contact" placeholder="Email: jobs@company.com&#10;Phone: +237 6X XX XX XX"></textarea></div>
+        <div class="form-group">
+          <label class="form-label">Image (optional)</label>
+          <div class="upload-zone" onclick="document.getElementById('f-img').click()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style="color:var(--muted);margin:0 auto"><path d="M4 16l4-4 4 4 4-6 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="1.3" opacity=".4"/></svg>
+            <div class="upload-label">Click to upload image</div>
+            <input type="file" id="f-img" accept="image/*" style="display:none" onchange="previewImg(this)">
+          </div>
+          <div class="image-preview-wrap" id="img-preview-wrap">
+            <img id="img-preview" alt="Preview">
+            <button type="button" onclick="removeImg()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:6px">Remove</button>
+          </div>
+        </div>
+        <button type="submit" class="btn-submit" id="post-submit-btn">Publish Opportunity</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- SUBSCRIBE — now with Firestore status + admin panel -->
+<div class="modal-overlay" id="modal-subscribe">
+  <div class="modal sub-modal" style="max-width:460px">
+    <button class="modal-close" onclick="closeModal('modal-subscribe')"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <div class="modal-body">
+      <!-- Firestore connection badge -->
+      <div class="fs-status" id="fsStatusBadge">
+        <span class="fs-dot"></span>
+        <span id="fsStatusText">Connecting to database…</span>
+      </div>
+
+      <div class="sub-icon">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="3" y="6" width="22" height="16" rx="2" stroke="#00C46A" stroke-width="1.5"/><path d="M3 10l11 7 11-7" stroke="#00C46A" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div class="sub-title">Never Miss an Opportunity</div>
+      <p class="sub-desc">Get instant email alerts when new opportunities are posted. Your subscription is shared globally — join <strong id="subModalCount">—</strong> people already subscribed.</p>
+      <div class="sub-features">
+        <div class="sub-feat"><div class="sub-feat-dot"></div>Internships &amp; Jobs</div>
+        <div class="sub-feat"><div class="sub-feat-dot"></div>Scholarships &amp; Funding</div>
+        <div class="sub-feat"><div class="sub-feat-dot"></div>Hackathons &amp; Competitions</div>
+        <div class="sub-feat"><div class="sub-feat-dot"></div>Bootcamps &amp; Training</div>
+      </div>
+      <input class="form-input" id="sub-email" type="email" placeholder="Your email address" style="margin-bottom:8px">
+      <input class="form-input" id="sub-name" type="text" placeholder="Your name (optional)" style="margin-bottom:12px">
+      <button class="btn-submit" id="sub-btn" onclick="handleSubscribe()">Subscribe Now</button>
+      <p style="font-size:11px;color:var(--muted);margin-top:12px">No spam. Unsubscribe anytime.</p>
+
+      <!-- Admin toggle -->
+      <button class="admin-toggle" onclick="toggleAdminPanel()">⚙ Manage subscribers (admin)</button>
+      <div class="admin-panel" id="adminPanel">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;font-family:'DM Mono',monospace">All Subscribers (Firestore)</div>
+        <div class="admin-list" id="adminList">
+          <div class="admin-empty">Loading…</div>
+        </div>
+        <button onclick="refreshAdminList()" style="font-size:11px;color:var(--green);background:none;border:none;cursor:pointer;margin-top:8px;font-family:'DM Mono',monospace">↻ Refresh list</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SAVED -->
+<div class="modal-overlay" id="modal-saved">
+  <div class="modal" style="max-width:440px">
+    <button class="modal-close" onclick="closeModal('modal-saved')"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <div class="modal-header"><div class="modal-title">Saved Opportunities</div></div>
+    <div class="modal-body" id="saved-body"></div>
+    <div class="modal-footer"><button class="btn-outline" onclick="closeModal('modal-saved')">Close</button></div>
+  </div>
+</div>
+
+<script>
+/* ══ CONFIG ══ */
+const EJS_KEY='LlYirrIymx-2nVmRS', EJS_SVC='service_1i2ajjg', EJS_TPL='template_qc0zvaa';
+emailjs.init(EJS_KEY);
+
+/* ══ FIRESTORE BRIDGE ══
+   The Firebase module sets window._fs once ready.
+   We wait for it via the 'fsReady' event. */
+let _fs = null;
+let fsOnline = false;
+
+function waitForFs() {
+  return new Promise(resolve => {
+    if (window._fsReady) { _fs = window._fs; resolve(); return; }
+    window.addEventListener('fsReady', () => { _fs = window._fs; resolve(); }, { once: true });
+    // Timeout fallback — if Firebase config is wrong / blocked
+    setTimeout(() => resolve(), 6000);
+  });
+}
+
+async function initFirestore() {
+  await waitForFs();
+  if (!_fs) {
+    setFsStatus(false, 'Database unavailable — using local fallback');
+    return;
+  }
+  try {
+    // Test connection with a lightweight read
+    await _fs.fsGetAllEmails();
+    fsOnline = true;
+    setFsStatus(true, 'Connected — subscribers synced globally');
+    // Start real-time count watcher
+    _fs.fsWatchCount(count => {
+      document.getElementById('subCountVal').textContent = count;
+      document.getElementById('subModalCount').textContent = count;
+    });
+  } catch(e) {
+    console.warn('Firestore init error:', e);
+    setFsStatus(false, 'DB error — check Firebase config');
+  }
+}
+
+function setFsStatus(ok, msg) {
+  const badge = document.getElementById('fsStatusBadge');
+  const text  = document.getElementById('fsStatusText');
+  badge.className = 'fs-status ' + (ok ? 'connected' : 'error');
+  text.textContent = msg;
+}
+
+/* ══ DATA ══ */
+const DEFAULT_IMGS={
+  internship:'https://images.unsplash.com/photo-1581091226033-d5c48150dbaa?w=500&h=250&fit=crop',
+  scholarship:'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=500&h=250&fit=crop',
+  hackathon:'https://images.unsplash.com/photo-1504384764586-bb4cdc1707b0?w=500&h=250&fit=crop',
+  competition:'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=500&h=250&fit=crop',
+  bootcamp:'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=500&h=250&fit=crop'
+};
+
+let opps=[
+  {id:1,type:'internship',title:'Software Engineering Intern',org:'MTN Cameroon',loc:'Douala',deadline:'2025-07-15',daysLeft:46,benefits:'Stipend: 150,000 FCFA/month',req:'CS/IT student, JavaScript/Python',desc:'Join our engineering team building next-generation cloud interfaces for Cameroon.',img:DEFAULT_IMGS.internship,method:'link',url:'https://www.mtn.cm/careers',added:'2025-05-20'},
+  {id:2,type:'internship',title:'Data Analyst Intern',org:'Orange Cameroon',loc:'Yaoundé',deadline:'2025-07-10',daysLeft:41,benefits:'Stipend: 120,000 FCFA/month',req:'Excel, SQL skills required',desc:'Analyze customer data to generate actionable business insights for our leadership team.',img:'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&h=250&fit=crop',method:'link',url:'https://www.orange.cm/careers',added:'2025-05-25'},
+  {id:3,type:'scholarship',title:'Excellence STEM Scholarship',org:'Mastercard Foundation',loc:'Remote',deadline:'2025-08-30',daysLeft:92,benefits:'Full tuition + monthly stipend',req:'GPA 3.5+ in STEM field',desc:'Full funding for STEM studies at leading African universities.',img:DEFAULT_IMGS.scholarship,method:'link',url:'https://mastercardfdn.org/scholars',added:'2025-05-15'},
+  {id:4,type:'scholarship',title:'Women in Tech Scholarship',org:'Google',loc:'Remote',deadline:'2025-09-15',daysLeft:108,benefits:'Full scholarship + mentorship',req:'Female students in computer science',desc:'Supporting women entering computer science across Africa.',img:'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=500&h=250&fit=crop',method:'link',url:'https://buildyourfuture.withgoogle.com/scholarships',added:'2025-05-18'},
+  {id:5,type:'hackathon',title:'FinTech Innovation Hackathon',org:'EcoBank',loc:'Yaoundé',deadline:'2025-07-20',daysLeft:51,benefits:'Prize: 3,000,000 FCFA',req:'Teams of 2–5 members',desc:'Build innovative financial inclusion solutions for underserved communities in Cameroon.',img:DEFAULT_IMGS.hackathon,method:'contact',contact:'Email: innovation@ecobank.com\nPhone: +237 222 123 456\nWhatsApp: +237 677 000 000',added:'2025-06-01'},
+  {id:6,type:'hackathon',title:'AI for Good Hackathon',org:'Google Developers Group',loc:'Douala',deadline:'2025-07-25',daysLeft:56,benefits:'Prize: 1,500,000 FCFA',req:'AI/ML knowledge preferred',desc:'Build AI-powered solutions that create measurable social impact across Cameroon.',img:'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=500&h=250&fit=crop',method:'link',url:'https://gdg.community.dev/events',added:'2025-06-02'},
+  {id:7,type:'competition',title:'National Business Plan Competition',org:'CAPI',loc:'Douala',deadline:'2025-08-10',daysLeft:72,benefits:'Prize: 5,000,000 FCFA',req:'Any valid startup idea',desc:'Pitch your startup idea to top investors and business leaders in Cameroon.',img:DEFAULT_IMGS.competition,method:'contact',contact:'Email: competitions@capi.cm\nPhone: +237 233 456 789',added:'2025-05-28'},
+  {id:8,type:'competition',title:'African Coding Challenge',org:'AfriTech Hub',loc:'Remote',deadline:'2025-08-20',daysLeft:82,benefits:'Prize: 2,000,000 FCFA',req:'Intermediate programming skills',desc:'Algorithmic coding competition for the best developers across Africa.',img:'https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=500&h=250&fit=crop',method:'link',url:'https://afritechhub.org/challenge',added:'2025-06-05'},
+  {id:9,type:'bootcamp',title:'Full Stack Web Bootcamp',org:'Digital Lab Buea',loc:'Buea',deadline:'2025-07-30',daysLeft:61,benefits:'Certificate + job placement support',req:'Basic HTML/CSS knowledge',desc:'12-week intensive MERN stack program with real project experience and mentorship.',img:DEFAULT_IMGS.bootcamp,method:'contact',contact:'Email: info@digitallab.cm\nPhone: +237 678 901 234',added:'2025-06-03'},
+  {id:10,type:'bootcamp',title:'Data Science Intensive',org:'CM Data Institute',loc:'Yaoundé',deadline:'2025-08-05',daysLeft:67,benefits:'Professional certification',req:'Python basics helpful',desc:'8-week data science bootcamp covering Python, ML, and visualization with industry projects.',img:'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&h=250&fit=crop',method:'link',url:'https://cmdatainstitute.org/bootcamp',added:'2025-06-04'},
+];
+
+let saved=JSON.parse(localStorage.getItem('sc_saved')||'[]');
+let pendingImg=null;
+let activeFilter='all',searchQ='',locFilter='all',sortMode='latest';
+
+/* ══ NAV SCROLL ══ */
+window.addEventListener('scroll',()=>document.getElementById('nav').classList.toggle('scrolled',scrollY>30));
+
+/* ══ STATS ══ */
+function countUp(el,target){
+  let n=0;const step=Math.ceil(Math.max(target/40,1));
+  const t=setInterval(()=>{n=Math.min(n+step,target);el.textContent=n;if(n>=target)clearInterval(t)},25);
+}
+function updateStats(){
+  const a=opps.filter(o=>o.daysLeft>0);
+  countUp(document.getElementById('stat-total'),a.length);
+  countUp(document.getElementById('stat-intern'),a.filter(o=>o.type==='internship').length);
+  countUp(document.getElementById('stat-scholar'),a.filter(o=>o.type==='scholarship').length);
+  countUp(document.getElementById('stat-hack'),a.filter(o=>o.type==='hackathon'||o.type==='competition').length);
+  countUp(document.getElementById('stat-boot'),a.filter(o=>o.type==='bootcamp').length);
+  const b=document.getElementById('bookmark-badge');
+  b.textContent=saved.length;
+  b.classList.toggle('show',saved.length>0);
+}
+
+/* ══ RENDER ══ */
+function fmtDate(d){return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+function render(){
+  let list=opps.filter(o=>o.daysLeft>0);
+  if(activeFilter!=='all')list=list.filter(o=>o.type===activeFilter);
+  if(locFilter!=='all')list=list.filter(o=>o.loc===locFilter);
+  if(searchQ)list=list.filter(o=>o.title.toLowerCase().includes(searchQ)||o.org.toLowerCase().includes(searchQ));
+  if(sortMode==='soonest')list.sort((a,b)=>a.daysLeft-b.daysLeft);
+  else if(sortMode==='newest')list.sort((a,b)=>new Date(b.added)-new Date(a.added));
+  else list.sort((a,b)=>b.id-a.id);
+  const grid=document.getElementById('opp-grid');
+  const empty=document.getElementById('empty-state');
+  if(!list.length){grid.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  grid.innerHTML=list.map((o,i)=>{
+    const isSaved=saved.includes(o.id);const urgent=o.daysLeft<=14;
+    const img=o.img||DEFAULT_IMGS[o.type];
+    return `<div class="opp-card" style="transition-delay:${i*0.05}s">
+      <div class="card-img-wrap">
+        <img class="card-img" src="${img}" alt="${o.title}" loading="lazy">
+        <button class="card-bookmark${isSaved?' saved':''}" onclick="toggleSave(${o.id},this)" title="${isSaved?'Remove':'Save'}">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="${isSaved?'currentColor':'none'}"><path d="M2 1h10a1 1 0 011 1v11l-6-3-6 3V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="card-strip strip-${o.type}"></div>
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="type-badge tb-${o.type}">${o.type}</span>
+          ${urgent?'<span class="urgent-badge">Urgent</span>':''}
+          <span class="days-badge">${o.daysLeft}d left</span>
+        </div>
+        <div class="card-title">${o.title}</div>
+        <div class="card-org">${o.org}</div>
+        <div class="card-desc">${o.desc}</div>
+      </div>
+      <div class="card-footer">
+        <span class="card-location">
+          <svg width="11" height="13" viewBox="0 0 11 13" fill="none"><path d="M5.5 1C3.015 1 1 3.015 1 5.5c0 3.375 4.5 7.5 4.5 7.5S10 8.875 10 5.5C10 3.015 7.985 1 5.5 1z" stroke="currentColor" stroke-width="1.2"/><circle cx="5.5" cy="5.5" r="1.5" stroke="currentColor" stroke-width="1.2"/></svg>
+          ${o.loc}
+        </span>
+        <button class="card-cta" onclick="openDetail(${o.id})">
+          View Details
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.opp-card').forEach((c,i)=>{setTimeout(()=>c.classList.add('visible'),i*60)});
+  });
+}
+
+/* ══ DETAIL ══ */
+function openDetail(id){
+  const o=opps.find(x=>x.id===id);if(!o)return;
+  document.getElementById('dm-img').src=o.img||DEFAULT_IMGS[o.type];
+  document.getElementById('dm-badge').className=`type-badge tb-${o.type}`;
+  document.getElementById('dm-badge').textContent=o.type;
+  document.getElementById('dm-days').textContent=`${o.daysLeft} days left`;
+  document.getElementById('dm-title').textContent=o.title;
+  document.getElementById('dm-org').textContent=o.org;
+  document.getElementById('dm-loc').textContent=o.loc;
+  document.getElementById('dm-dead').textContent=fmtDate(o.deadline);
+  document.getElementById('dm-ben').textContent=o.benefits||'—';
+  document.getElementById('dm-req').textContent=o.req||'See listing';
+  document.getElementById('dm-desc').textContent=o.desc;
+  document.getElementById('dm-apply-btn').onclick=()=>applyFor(o);
+  openModal('modal-details');
+}
+function applyFor(o){
+  if(o.method==='link'&&o.url&&o.url!=='#'){window.open(o.url,'_blank');}
+  else if(o.method==='contact'&&o.contact){closeModal('modal-details');showContact(o.contact);}
+  else{toast('Application details coming soon!','');}
+}
+
+/* ══ CONTACT ══ */
+function showContact(text){
+  const lines=text.split('\n').filter(l=>l.trim());
+  document.getElementById('contact-body').innerHTML=lines.map(line=>{
+    let ip='<path d="M2 4h10a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V5a1 1 0 011-1z" stroke="#00C46A" stroke-width="1.2"/><path d="M1 5l6 4 6-4" stroke="#00C46A" stroke-width="1.2"/>';
+    if(line.toLowerCase().includes('phone')||line.includes('+237'))ip='<path d="M3 2h3l1.5 3.5-2 1.2A9 9 0 009.3 9.5l1.2-2L14 9v3c0 1-1 2-2 2A11 11 0 012 4c0-1 1-2 2-2z" stroke="#00C46A" stroke-width="1.2"/>';
+    else if(line.toLowerCase().includes('whatsapp'))ip='<circle cx="8" cy="8" r="6" stroke="#00C46A" stroke-width="1.2"/><path d="M5.5 6.5s0 1 2.5 2.5 2.5 0 2.5 0" stroke="#00C46A" stroke-width="1.2" stroke-linecap="round"/>';
+    else if(line.toLowerCase().includes('website')||line.toLowerCase().includes('www'))ip='<circle cx="8" cy="8" r="6" stroke="#00C46A" stroke-width="1.2"/><path d="M2 8h12M8 2c-2 2-2 10 0 12M8 2c2 2 2 10 0 12" stroke="#00C46A" stroke-width="1.2" stroke-linecap="round"/>';
+    const clean=line.replace(/^(Email|Phone|WhatsApp|Website|Address):\s*/i,'').trim();
+    return `<div class="contact-item"><div class="contact-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none">${ip}</svg></div><div class="contact-text">${line}</div><button class="copy-btn" onclick="copyText('${clean.replace(/'/g,"\\'")}')"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="9" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M2 10V2a1 1 0 011-1h7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></div>`;
+  }).join('');
+  openModal('modal-contact');
+}
+function copyText(t){navigator.clipboard.writeText(t);toast('Copied!','success')}
+
+/* ══ SAVE ══ */
+function toggleSave(id,btn){
+  event.stopPropagation();
+  if(saved.includes(id)){saved=saved.filter(x=>x!==id);btn.classList.remove('saved');}
+  else{saved.push(id);btn.classList.add('saved');}
+  localStorage.setItem('sc_saved',JSON.stringify(saved));updateStats();
+}
+function openSaved(){
+  const list=opps.filter(o=>saved.includes(o.id));
+  const body=document.getElementById('saved-body');
+  if(!list.length){body.innerHTML='<p style="text-align:center;color:var(--muted);padding:40px 0">No saved opportunities yet.</p>';openModal('modal-saved');return;}
+  body.innerHTML=list.map(o=>`
+    <div style="display:flex;gap:12px;padding:12px;background:var(--b0);border:1px solid var(--b1);border-radius:10px;margin-bottom:10px;align-items:center">
+      <img src="${o.img||DEFAULT_IMGS[o.type]}" style="width:56px;height:56px;object-fit:cover;border-radius:8px">
+      <div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--white)">${o.title}</div><div style="font-size:12px;color:var(--muted)">${o.org} · ${o.loc}</div></div>
+      <button onclick="removeSaved(${o.id})" style="background:none;border:none;cursor:pointer;color:var(--red);padding:6px"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M5 4V2h4v2M5.5 6.5v4M8.5 6.5v4M3 4l.7 8h6.6L11 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>`).join('');
+  openModal('modal-saved');
+}
+function removeSaved(id){saved=saved.filter(x=>x!==id);localStorage.setItem('sc_saved',JSON.stringify(saved));updateStats();openSaved();render();}
+
+/* ══ SUBSCRIBE (Firestore-backed) ══ */
+function openSubscribe(){openModal('modal-subscribe')}
+
+async function handleSubscribe(){
+  const email=document.getElementById('sub-email').value.trim();
+  const name =document.getElementById('sub-name').value.trim();
+  if(!email||!email.includes('@')){toast('Enter a valid email address','error');return;}
+
+  const btn=document.getElementById('sub-btn');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Subscribing…';
+
+  if(fsOnline && _fs){
+    // ── Firestore path ──
+    try{
+      const result=await _fs.fsAddSubscriber(email,name);
+      if(result.alreadyExists){
+        btn.disabled=false;btn.textContent='Subscribe Now';
+        toast('You are already subscribed!','');
+        closeModal('modal-subscribe');return;
+      }
+      // Send welcome email
+      await sendEmail(email,{
+        name:name||email.split('@')[0],
+        title:'Welcome to SkillSync CM Alerts',organization:'SkillSync CM',
+        loc:'Cameroon',deadline:new Date(Date.now()+30*86400000).toISOString(),
+        benefits:'Daily opportunity alerts, career resources & more',
+        desc:'Thank you for subscribing! You will now receive alerts for new internships, scholarships, hackathons, competitions, and bootcamps in Cameroon.',
+        applyLink:'https://skillsync.cm/opportunities'
+      });
+      toast(`Subscribed! Welcome email sent to ${email}`,'success');
+    }catch(e){
+      console.error('Firestore subscribe error:',e);
+      toast('Subscription failed — try again','error');
+    }
+  } else {
+    // ── Local fallback (no Firebase config) ──
+    const local=JSON.parse(localStorage.getItem('sc_subs')||'[]');
+    if(local.includes(email)){toast('Already subscribed!','');closeModal('modal-subscribe');btn.disabled=false;btn.textContent='Subscribe Now';return;}
+    local.push(email);
+    localStorage.setItem('sc_subs',JSON.stringify(local));
+    toast(`Subscribed locally (Firestore not configured)`,'');
+  }
+
+  btn.disabled=false;btn.textContent='Subscribe Now';
+  document.getElementById('sub-email').value='';
+  document.getElementById('sub-name').value='';
+  closeModal('modal-subscribe');
+}
+
+/* ══ ADMIN PANEL ══ */
+let adminVisible=false;
+function toggleAdminPanel(){
+  adminVisible=!adminVisible;
+  document.getElementById('adminPanel').classList.toggle('show',adminVisible);
+  if(adminVisible) refreshAdminList();
+}
+async function refreshAdminList(){
+  const list=document.getElementById('adminList');
+  list.innerHTML='<div class="admin-empty">Loading…</div>';
+  if(!fsOnline||!_fs){list.innerHTML='<div class="admin-empty">Firestore not connected.</div>';return;}
+  try{
+    const subs=await _fs.fsGetAllEmails();
+    if(!subs.length){list.innerHTML='<div class="admin-empty">No subscribers yet.</div>';return;}
+    list.innerHTML=subs.map(s=>`
+      <div class="admin-item">
+        <span>${s.email}${s.name&&s.name!==s.email?' ('+s.name+')':''}</span>
+        <button class="admin-del" onclick="deleteSubscriber('${s.email.replace(/'/g,"\\'")}',this)" title="Remove">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+      </div>`).join('');
+  }catch(e){list.innerHTML='<div class="admin-empty">Error loading subscribers.</div>';}
+}
+async function deleteSubscriber(email,btn){
+  if(!_fs)return;
+  btn.disabled=true;
+  try{
+    await _fs.fsRemoveSubscriber(email);
+    toast(`Removed ${email}`,'success');
+    refreshAdminList();
+  }catch(e){toast('Remove failed','error');btn.disabled=false;}
+}
+
+/* ══ EMAIL ══ */
+async function sendEmail(email,data){
+  try{
+    await emailjs.send(EJS_SVC,EJS_TPL,{
+      opportunity_title:data.title,organization_name:data.organization,
+      opportunity_location:data.loc,
+      opportunity_deadline:new Date(data.deadline).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}),
+      opportunity_benefits:data.benefits||'See listing',
+      opportunity_description:data.desc,
+      apply_link:data.applyLink||'https://skillsync.cm/opportunities',
+      current_year:new Date().getFullYear(),
+      to_email:email,to_name:data.name||email.split('@')[0]
+    });
+    return true;
+  }catch(e){console.error('Email failed:',e);return false;}
+}
+
+async function notifyAll(opp){
+  let allSubs=[];
+  if(fsOnline&&_fs){
+    try{allSubs=await _fs.fsGetAllEmails();}catch(e){allSubs=[];}
+  }
+  // Merge with local fallback
+  const local=JSON.parse(localStorage.getItem('sc_subs')||'[]');
+  local.forEach(em=>{if(!allSubs.find(s=>s.email===em))allSubs.push({email:em,name:''});});
+  if(!allSubs.length){return;}
+  toast(`Notifying ${allSubs.length} subscriber(s)…`,'');
+  let ok=0;
+  for(const sub of allSubs){
+    const sent=await sendEmail(sub.email,{
+      name:sub.name,title:opp.title,organization:opp.org,
+      loc:opp.loc,deadline:opp.deadline,
+      benefits:opp.benefits,desc:opp.desc,
+      applyLink:opp.method==='link'?opp.url:'https://skillsync.cm/opportunities'
+    });
+    if(sent)ok++;
+    await new Promise(r=>setTimeout(r,700));
+  }
+  toast(`Notified ${ok}/${allSubs.length} subscribers`,'success');
+}
+
+/* ══ POST ══ */
+function openPostModal(){openModal('modal-post')}
+function toggleApplyMethod(){
+  const m=document.getElementById('f-method').value;
+  document.getElementById('f-link-wrap').style.display=m==='link'?'block':'none';
+  document.getElementById('f-contact-wrap').style.display=m==='contact'?'block':'none';
+}
+function previewImg(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{pendingImg=e.target.result;document.getElementById('img-preview').src=pendingImg;document.getElementById('img-preview-wrap').style.display='block'};
+  r.readAsDataURL(f);
+}
+function removeImg(){pendingImg=null;document.getElementById('f-img').value='';document.getElementById('img-preview-wrap').style.display='none';}
+async function handlePost(e){
+  e.preventDefault();
+  const btn=document.getElementById('post-submit-btn');
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Publishing…';
+  const type=document.getElementById('f-type').value;
+  const days=parseInt(document.getElementById('f-days').value);
+  const method=document.getElementById('f-method').value;
+  const newOpp={
+    id:Date.now(),type,
+    title:document.getElementById('f-title').value,
+    org:document.getElementById('f-org').value,
+    loc:document.getElementById('f-loc').value,
+    daysLeft:days,
+    deadline:new Date(Date.now()+days*86400000).toISOString().split('T')[0],
+    benefits:document.getElementById('f-benefits').value||'Contact for details',
+    req:'See official listing',
+    desc:document.getElementById('f-desc').value,
+    img:pendingImg||DEFAULT_IMGS[type],
+    method,
+    url:method==='link'?document.getElementById('f-url').value||'#':null,
+    contact:method==='contact'?document.getElementById('f-contact').value:null,
+    added:new Date().toISOString().split('T')[0]
+  };
+  opps.unshift(newOpp);
+  await notifyAll(newOpp);
+  e.target.reset();removeImg();
+  document.getElementById('f-link-wrap').style.display='block';
+  document.getElementById('f-contact-wrap').style.display='none';
+  btn.disabled=false;btn.textContent='Publish Opportunity';
+  closeModal('modal-post');render();updateStats();
+  toast('Opportunity published! Subscribers notified.','success');
+}
+
+/* ══ MODAL HELPERS ══ */
+function openModal(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden'}
+function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow=''}
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)});
+});
+
+/* ══ FILTERS ══ */
+document.getElementById('search-input').addEventListener('input',e=>{searchQ=e.target.value.toLowerCase();render()});
+document.getElementById('loc-filter').addEventListener('change',e=>{locFilter=e.target.value;render()});
+document.getElementById('sort-select').addEventListener('change',e=>{sortMode=e.target.value;render()});
+document.getElementById('filter-pills').addEventListener('click',e=>{
+  const pill=e.target.closest('.pill');if(!pill)return;
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  pill.classList.add('active');activeFilter=pill.dataset.filter;render();
+});
+
+/* ══ TOAST ══ */
+function toast(msg,type=''){
+  const t=document.createElement('div');
+  t.className=`toast${type?' '+type:''}`;t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(8px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300)},3200);
+}
+
+/* ══ INIT ══ */
+render();
+updateStats();
+initFirestore();
+
+// Show subscribe popup to first-time visitors
+setTimeout(()=>{
+  if(!localStorage.getItem('sc_popup_seen')){
+    localStorage.setItem('sc_popup_seen','1');openModal('modal-subscribe');
+  }
+},3000);
+</script>
+
+
+
+<!-- Floating AI Button -->
+<div class="floating-ai-btn" id="floatingAIBtn" onclick="window.location.href='ai-chat.html'" title="Chat with AI">
+    <img src="LOGO.jpg" alt="SkillSync AI Assistant">
+    <span class="floating-ai-text">
+        <span>🤖 Chat with AI</span>
+        <span class="text-arrow">→</span>
+    </span>
+    <span class="floating-ai-badge">AI</span>
+    <span class="floating-ai-status"></span>
+</div>
+
+<script>
+    // Trigger vibration animation on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const aiBtn = document.getElementById('floatingAIBtn');
+        
+        // Hide on AI page
+        if (window.location.pathname.includes('ai-chat.html')) {
+            aiBtn.style.display = 'none';
+            return;
+        }
+        
+        // Add vibrate class to start animation
+        aiBtn.classList.add('vibrate');
+        
+        // Remove vibration class after 4 seconds (when animation ends)
+        setTimeout(function() {
+            aiBtn.classList.remove('vibrate');
+        }, 4000);
+    });
+</script>
+</body>
+</html>

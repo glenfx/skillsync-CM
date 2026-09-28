@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillSync CM — Market Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Outfit:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#04080F;--s1:#0A1020;--s2:#0D1628;--s3:#111d30;
+  --b0:rgba(255,255,255,0.03);--b1:rgba(255,255,255,0.07);--b2:rgba(255,255,255,0.13);
+  --green:#00C46A;--green-lo:rgba(0,196,106,0.08);--green-mid:rgba(0,196,106,0.18);
+  --gold:#E8B84B;--gold-lo:rgba(232,184,75,0.08);--gold-mid:rgba(232,184,75,0.2);
+  --red:#E85C5C;--red-lo:rgba(232,92,92,0.07);
+  --blue:#5C9EE8;--blue-lo:rgba(92,158,232,0.08);
+  --purple:#9B6EE8;--purple-lo:rgba(155,110,232,0.08);
+  --teal:#00C4B4;--teal-lo:rgba(0,196,180,0.08);
+  --white:#EEF4FA;--text:#B8CDD8;--muted:#4E6272;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;line-height:1.6;overflow-x:hidden;min-height:100vh}
+
+/* ── AMBIENT BG ── */
+.bg-layer{position:fixed;inset:0;pointer-events:none;z-index:0}
+.bg-layer::before{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(0,196,106,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,196,106,0.018) 1px,transparent 1px);
+  background-size:72px 72px;
+  mask-image:radial-gradient(ellipse 85% 60% at 50% 0%,black 10%,transparent 100%);
+}
+.bg-layer::after{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 900px 550px at 88% -8%,rgba(0,196,106,0.06) 0%,transparent 55%),
+    radial-gradient(ellipse 700px 450px at 5% 92%,rgba(232,184,75,0.045) 0%,transparent 55%),
+    radial-gradient(ellipse 500px 400px at 50% 55%,rgba(92,158,232,0.025) 0%,transparent 60%);
+}
+
+/* ── NAV ── */
+nav{
+  position:sticky;top:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 52px;height:66px;
+  background:rgba(4,8,15,0);backdrop-filter:blur(0);
+  border-bottom:1px solid transparent;
+  transition:all 0.4s ease;
+}
+nav.scrolled{background:rgba(4,8,15,0.95);backdrop-filter:blur(28px);border-color:var(--b1)}
+.nav-logo{display:flex;align-items:baseline;gap:1px;font-family:'Playfair Display',serif;font-weight:900;font-size:21px;text-decoration:none;letter-spacing:-0.5px}
+.nl1{color:var(--white)}.nl2{color:var(--green)}.nl3{color:var(--gold);font-size:17px;margin-left:4px}
+.nav-links{display:flex;align-items:center;gap:28px;list-style:none}
+.nav-links a{font-size:13px;font-weight:500;color:rgba(238,244,250,0.55);text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:var(--white)}
+.nav-links a.active{color:var(--gold)}
+.nav-badge{
+  font-size:10px;font-weight:600;letter-spacing:.8px;
+  background:rgba(232,184,75,0.1);border:1px solid rgba(232,184,75,0.22);
+  color:var(--gold);padding:3px 9px;border-radius:100px;
+  font-family:'DM Mono',monospace;margin-left:10px;
+}
+.nav-back{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);text-decoration:none;transition:color .2s}
+.nav-back:hover{color:var(--white)}
+.nav-back svg{transition:transform .2s}
+.nav-back:hover svg{transform:translateX(-3px)}
+
+/* ── HERO ── */
+.hero{
+  position:relative;z-index:1;
+  padding:72px 52px 52px;max-width:1340px;margin:0 auto;
+}
+.hero-inner{
+  display:grid;grid-template-columns:1fr 520px;gap:60px;align-items:end;
+  padding-bottom:44px;border-bottom:1px solid var(--b1);
+}
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  margin-bottom:18px;
+  animation:fadeUp .7s .1s both;
+}
+.eyebrow-tag{
+  font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;
+  color:var(--gold);background:var(--gold-lo);border:1px solid var(--gold-mid);
+  padding:4px 12px;border-radius:100px;font-family:'DM Mono',monospace;
+}
+.eyebrow-pulse{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 2.2s infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(232,184,75,.4)}70%{opacity:.6;box-shadow:0 0 0 6px rgba(232,184,75,0)}}
+.hero-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(44px,5.5vw,72px);font-weight:900;
+  line-height:1.04;letter-spacing:-2.5px;
+  color:var(--white);margin-bottom:18px;
+  animation:fadeUp .8s .2s both;
+}
+.hero-title .acc{color:var(--green)}
+.hero-title .acc-gold{
+  background:linear-gradient(120deg,var(--gold) 0%,#f5d080 60%,var(--gold) 100%);
+  background-size:200% auto;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:shimmer 4s linear infinite;
+}
+@keyframes shimmer{to{background-position:200% center}}
+.hero-desc{font-size:15.5px;color:var(--muted);line-height:1.78;font-weight:300;max-width:520px;animation:fadeUp .7s .35s both}
+.hero-right{animation:fadeUp .8s .4s both}
+
+/* Last updated notice */
+.update-card{
+  background:var(--s1);border:1px solid var(--b1);border-radius:14px;
+  padding:20px 22px;margin-bottom:18px;
+}
+.update-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.update-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.update-label{font-size:11px;font-weight:600;letter-spacing:1.5px;color:var(--green);font-family:'DM Mono',monospace;text-transform:uppercase}
+.update-time{font-size:11px;color:var(--muted);margin-left:auto;font-family:'DM Mono',monospace}
+.kpi-mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi-mini{background:var(--b0);border:1px solid var(--b1);border-radius:10px;padding:14px}
+.kpi-mini-val{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--white);line-height:1}
+.kpi-mini-val.g{color:var(--green)}.kpi-mini-val.gold{color:var(--gold)}.kpi-mini-val.b{color:var(--blue)}.kpi-mini-val.r{color:var(--red)}
+.kpi-mini-lbl{font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:.5px;font-family:'DM Mono',monospace;text-transform:uppercase}
+.kpi-mini-delta{font-size:10px;margin-top:4px;font-family:'DM Mono',monospace}
+.delta-up{color:var(--green)}.delta-down{color:var(--red)}
+
+/* Nav pills */
+.section-nav{
+  display:flex;align-items:center;gap:8px;
+  position:sticky;top:66px;z-index:100;
+  background:rgba(4,8,15,0.92);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--b1);padding:14px 52px;
+  max-width:none;margin:0 -52px;
+  overflow-x:auto;scrollbar-width:none;
+}
+.section-nav::-webkit-scrollbar{display:none}
+.snav-item{
+  display:flex;align-items:center;gap:7px;
+  font-size:12.5px;font-weight:600;
+  color:var(--muted);background:none;border:none;cursor:pointer;
+  padding:8px 16px;border-radius:8px;
+  transition:all .2s;font-family:'Outfit',sans-serif;
+  white-space:nowrap;
+}
+.snav-item:hover{color:var(--text);background:var(--b0)}
+.snav-item.active{color:var(--gold);background:var(--gold-lo);border:1px solid rgba(232,184,75,.15)}
+.snav-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ── MAIN WRAPPER ── */
+.main{max-width:1340px;margin:0 auto;padding:0 52px 80px;position:relative;z-index:1}
+
+/* ── SECTION FRAMES ── */
+.page-section{padding:52px 0 0;scroll-margin-top:130px}
+.section-header{margin-bottom:32px}
+.section-eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.se-line{width:28px;height:2px;border-radius:1px}
+.se-text{font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;font-family:'DM Mono',monospace}
+.section-title{font-family:'Playfair Display',serif;font-size:clamp(28px,3vw,42px);font-weight:900;color:var(--white);letter-spacing:-1.5px;line-height:1.08;margin-bottom:10px}
+.section-desc{font-size:14px;color:var(--muted);max-width:600px;line-height:1.7}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ════════════════════════════════════════
+   SECTION 1 — TOP HIRING COMPANIES
+════════════════════════════════════════ */
+.companies-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:28px}
+@media(max-width:1000px){.companies-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.companies-grid{grid-template-columns:1fr}}
+
+.company-card{
+  background:var(--s1);border:1px solid var(--b1);border-radius:18px;
+  padding:22px;transition:all .3s cubic-bezier(.16,1,.3,1);
+  position:relative;overflow:hidden;
+  opacity:0;transform:translateY(18px);
+}
+.company-card.reveal{opacity:1;transform:translateY(0)}
+.company-card:hover{border-color:var(--b2);transform:translateY(-5px);box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.company-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:.7}
+
+/* Sector color accents */
+.cc-tech::before{background:var(--blue)}
+.cc-finance::before{background:var(--gold)}
+.cc-telecom::before{background:var(--green)}
+.cc-energy::before{background:var(--purple)}
+.cc-fmcg::before{background:var(--red)}
+.cc-ngo::before{background:var(--teal)}
+
+.cc-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
+.cc-logo{
+  width:46px;height:46px;border-radius:12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Playfair Display',serif;font-weight:900;font-size:18px;
+  border:1px solid var(--b2);
+}
+.cc-meta{flex:1}
+.cc-name{font-size:15px;font-weight:700;color:var(--white);line-height:1.2;margin-bottom:3px}
+.cc-sector{font-size:10.5px;font-weight:600;letter-spacing:1px;text-transform:uppercase;font-family:'DM Mono',monospace}
+.cc-rank{
+  font-family:'Playfair Display',serif;font-size:13px;font-weight:700;
+  color:var(--muted);background:var(--b0);border:1px solid var(--b1);
+  border-radius:6px;padding:3px 8px;white-space:nowrap;
+}
+.cc-rank span{color:var(--gold)}
+
+.cc-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.cc-stat{background:var(--b0);border-radius:8px;padding:10px 12px}
+.cc-stat-val{font-size:18px;font-weight:700;color:var(--white);font-family:'Playfair Display',serif;line-height:1}
+.cc-stat-lbl{font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px}
+
+.cc-roles{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+.cc-role-tag{font-size:10.5px;color:var(--text);background:var(--b0);border:1px solid var(--b1);border-radius:100px;padding:3px 10px;font-family:'DM Mono',monospace}
+
+.cc-footer{display:flex;align-items:center;justify-content:space-between}
+.cc-location{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.cc-hiring-badge{
+  font-size:10px;font-weight:600;font-family:'DM Mono',monospace;
+  padding:3px 10px;border-radius:100px;
+}
+.hiring-active{background:rgba(0,196,106,.1);border:1px solid rgba(0,196,106,.2);color:var(--green)}
+.hiring-seasonal{background:rgba(232,184,75,.1);border:1px solid rgba(232,184,75,.2);color:var(--gold)}
+.hiring-limited{background:rgba(232,92,92,.1);border:1px solid rgba(232,92,92,.2);color:var(--red)}
+
+/* Company bar chart */
+.companies-chart-row{
+  display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:stretch;
+}
+.chart-card{background:var(--s1);border:1px solid var(--b1);border-radius:18px;padding:26px}
+.chart-card-title{font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.chart-card-sub{font-size:11px;color:var(--muted);margin-bottom:20px;font-family:'DM Mono',monospace}
+.chart-wrap{position:relative}
+
+/* Sector breakdown donut */
+.sector-legend{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.sl-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text)}
+.sl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sl-bar-track{flex:1;height:4px;background:var(--b0);border-radius:100px;overflow:hidden}
+.sl-bar-fill{height:100%;border-radius:100px;transition:width 1.4s cubic-bezier(.16,1,.3,1);width:0%}
+.sl-pct{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);width:28px;text-align:right}
+
+/* ════════════════════════════════════════
+   SECTION 2 — JOB TREND CHARTS
+════════════════════════════════════════ */
+.trends-layout{display:flex;flex-direction:column;gap:20px}
+.trend-row{display:grid;gap:20px}
+.trend-row-2{grid-template-columns:1fr 1fr}
+.trend-row-3{grid-template-columns:2fr 1fr 1fr}
+
+.trend-card{background:var(--s1);border:1px solid var(--b1);border-radius:18px;padding:26px}
+.trend-card-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+.tc-title{font-size:14px;font-weight:600;color:var(--white);margin-bottom:4px}
+.tc-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.tc-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:600;font-family:'DM Mono',monospace;
+  padding:5px 12px;border-radius:100px;white-space:nowrap;flex-shrink:0;
+}
+.badge-up{background:rgba(0,196,106,.1);border:1px solid rgba(0,196,106,.2);color:var(--green)}
+.badge-down{background:rgba(232,92,92,.1);border:1px solid rgba(232,92,92,.2);color:var(--red)}
+.badge-stable{background:rgba(92,158,232,.1);border:1px solid rgba(92,158,232,.2);color:var(--blue)}
+
+/* Growth table */
+.growth-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.growth-table th{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 10px;font-family:'DM Mono',monospace;border-bottom:1px solid var(--b1)}
+.growth-table td{padding:9px 10px;border-bottom:1px solid var(--b0);color:var(--text);vertical-align:middle}
+.growth-table tr:last-child td{border-bottom:none}
+.growth-table tr:hover td{background:var(--b0)}
+.gt-spark{display:inline-block;width:48px;height:20px;vertical-align:middle}
+.gt-change{font-family:'DM Mono',monospace;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px}
+.gt-up{background:rgba(0,196,106,.1);color:var(--green)}
+.gt-down{background:rgba(232,92,92,.1);color:var(--red)}
+.gt-neutral{background:rgba(92,158,232,.1);color:var(--blue)}
+.role-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px}
+
+/* Demand heatmap */
+.heatmap-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:8px}
+.hm-cell{
+  border-radius:6px;aspect-ratio:1;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:9px;font-family:'DM Mono',monospace;
+  transition:transform .15s;cursor:default;
+  padding:4px 2px;text-align:center;
+}
+.hm-cell:hover{transform:scale(1.08);z-index:2;position:relative}
+.hm-label{color:rgba(255,255,255,.5);font-size:8px;margin-top:2px;line-height:1.2}
+
+/* ════════════════════════════════════════
+   SECTION 3 — SALARY RANGES
+════════════════════════════════════════ */
+.salary-tabs{display:flex;gap:4px;background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:5px;margin-bottom:24px;width:fit-content}
+.stab{
+  font-size:12.5px;font-weight:600;color:var(--muted);
+  background:none;border:none;cursor:pointer;
+  padding:8px 18px;border-radius:8px;
+  transition:all .2s;font-family:'Outfit',sans-serif;
+}
+.stab.active{color:var(--white);background:var(--s2);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.stab:hover:not(.active){color:var(--text)}
+
+.salary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+@media(max-width:1000px){.salary-grid{grid-template-columns:repeat(2,1fr)}}
+
+.salary-card{
+  background:var(--s1);border:1px solid var(--b1);border-radius:16px;
+  padding:22px;position:relative;overflow:hidden;
+  transition:all .3s cubic-bezier(.16,1,.3,1);
+  opacity:0;transform:translateY(14px);
+}
+.salary-card.reveal{opacity:1;transform:translateY(0)}
+.salary-card:hover{border-color:var(--b2);transform:translateY(-4px);box-shadow:0 18px 44px rgba(0,0,0,.4)}
+.salary-card::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity .3s;pointer-events:none;
+  background:radial-gradient(circle at 80% 20%,rgba(0,196,106,0.04) 0%,transparent 60%)}
+.salary-card:hover::after{opacity:1}
+
+.sc-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;gap:8px}
+.sc-role{font-size:14.5px;font-weight:700;color:var(--white);line-height:1.3}
+.sc-sector-tag{font-size:9.5px;font-weight:600;letter-spacing:1px;text-transform:uppercase;font-family:'DM Mono',monospace;padding:3px 9px;border-radius:100px;white-space:nowrap;flex-shrink:0}
+
+.sc-range{margin-bottom:14px}
+.sc-range-label{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-family:'DM Mono',monospace;margin-bottom:6px}
+.sc-range-track{height:8px;border-radius:100px;background:var(--b1);position:relative;overflow:hidden;margin-bottom:6px}
+.sc-range-fill{position:absolute;height:100%;border-radius:100px;transition:left 1.2s cubic-bezier(.16,1,.3,1),width 1.2s cubic-bezier(.16,1,.3,1)}
+.sc-range-fill-inner{height:100%;border-radius:100px;width:100%}
+.sc-range-markers{display:flex;justify-content:space-between;font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)}
+
+.sc-median{
+  background:var(--green-lo);border:1px solid var(--green-mid);
+  border-radius:9px;padding:10px 14px;margin-bottom:12px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.sc-median-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green);line-height:1}
+.sc-median-lbl{font-size:10px;color:var(--green);opacity:.7;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px}
+.sc-yoy{font-size:11px;font-family:'DM Mono',monospace;font-weight:600;padding:3px 9px;border-radius:100px}
+.yoy-up{background:rgba(0,196,106,.1);color:var(--green)}.yoy-dn{background:rgba(232,92,92,.1);color:var(--red)}
+
+.sc-factors{display:flex;flex-direction:column;gap:5px}
+.sc-factor{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted)}
+.sc-factor-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;background:var(--b2)}
+
+/* Salary comparison big chart */
+.salary-compare-row{display:grid;grid-template-columns:1fr 320px;gap:20px}
+
+/* Percentile table */
+.pct-table{width:100%;border-collapse:collapse}
+.pct-table th{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 12px;font-family:'DM Mono',monospace;border-bottom:1px solid var(--b1)}
+.pct-table td{padding:10px 12px;border-bottom:1px solid var(--b0);color:var(--text);font-size:13px}
+.pct-table tr:last-child td{border-bottom:none}
+.pct-table tr:hover td{background:var(--b0)}
+.pct-pill{font-family:'DM Mono',monospace;font-size:11px;padding:2px 8px;border-radius:100px}
+
+/* ── INSIGHTS TICKER ── */
+.ticker-wrap{
+  background:var(--s1);border:1px solid var(--b1);border-radius:12px;
+  padding:14px 20px;margin-bottom:0;
+  display:flex;align-items:center;gap:16px;overflow:hidden;
+}
+.ticker-label{
+  font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--gold);font-family:'DM Mono',monospace;white-space:nowrap;flex-shrink:0;
+  background:var(--gold-lo);border:1px solid rgba(232,184,75,.15);
+  padding:4px 12px;border-radius:100px;
+}
+.ticker-track{flex:1;overflow:hidden;position:relative}
+.ticker-inner{display:flex;gap:40px;animation:ticker 40s linear infinite;white-space:nowrap}
+.ticker-inner:hover{animation-play-state:paused}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.tick-item{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--text)}
+.tick-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.tick-val{font-family:'DM Mono',monospace;font-size:11px}
+.tick-up{color:var(--green)}.tick-dn{color:var(--red)}.tick-neutral{color:var(--blue)}
+
+/* ── FOOTER ── */
+footer{
+  border-top:1px solid var(--b1);padding:28px 52px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;position:relative;z-index:1;
+}
+.footer-logo{font-family:'Playfair Display',serif;font-size:17px;font-weight:900;letter-spacing:-0.5px}
+.fl1{color:var(--white)}.fl2{color:var(--green)}.fl3{color:var(--gold)}
+.footer-copy{font-size:12px;color:var(--muted)}
+.footer-links{display:flex;gap:20px}
+.footer-links a{font-size:12px;color:var(--muted);text-decoration:none;transition:color .2s}
+.footer-links a:hover{color:var(--white)}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:3px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1100px){
+  .hero-inner{grid-template-columns:1fr}
+  .companies-chart-row{grid-template-columns:1fr}
+  .trend-row-3{grid-template-columns:1fr 1fr}
+  .salary-compare-row{grid-template-columns:1fr}
+  nav,.main,.hero{padding-left:24px;padding-right:24px}
+  .section-nav{padding-left:24px;padding-right:24px}
+  footer{padding-left:24px;padding-right:24px}
+}
+@media(max-width:700px){
+  .trend-row-2,.trend-row-3{grid-template-columns:1fr}
+  .kpi-mini-grid{grid-template-columns:1fr 1fr}
+  .heatmap-grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+
+<!-- NAV -->
+<nav id="main-nav">
+  <a href="skillsync-home.html" class="nav-logo">
+    <span class="nl1">Skill</span><span class="nl2">Sync</span><span class="nl3">CM</span>
+    <span class="nav-badge">Insights</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="skillsync-home.html">Home</a></li>
+    <li><a href="skillsync-skill-gap.html">Skill Analyzer</a></li>
+    <li><a href="skillsync-opportunities.html">Opportunities</a></li>
+    <li><a href="#" class="active">Market Insights</a></li>
+  </ul>
+  <a href="skillsync-home.html" class="nav-back">
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M9 3L4 7.5 9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Back
+  </a>
+</nav>
+
+<!-- SECTION NAV (sticky sub-nav) -->
+<div class="section-nav" id="section-nav">
+  <button class="snav-item active" onclick="scrollTo('s-companies',this)">
+    <div class="snav-dot" style="background:var(--blue)"></div>Top Hiring Companies
+  </button>
+  <button class="snav-item" onclick="scrollTo('s-trends',this)">
+    <div class="snav-dot" style="background:var(--green)"></div>Job Trend Charts
+  </button>
+  <button class="snav-item" onclick="scrollTo('s-salary',this)">
+    <div class="snav-dot" style="background:var(--gold)"></div>Salary Ranges
+  </button>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-eyebrow">
+        <div class="eyebrow-tag">2025 Data</div>
+        <div class="eyebrow-pulse"></div>
+        <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">Updated Q2 2025</span>
+      </div>
+      <h1 class="hero-title">
+        Cameroon<br><span class="acc-gold">Market</span><br><span class="acc">Intelligence</span>
+      </h1>
+      <p class="hero-desc">Real salary data, hiring trends, and company intelligence sourced from Cameroon's job market — so you can negotiate smarter, upskill faster, and target the right employers.</p>
+    </div>
+
+    <div class="hero-right">
+      <!-- Insights ticker -->
+      <div class="ticker-wrap" style="margin-bottom:16px">
+        <div class="ticker-label">Live Signals</div>
+        <div class="ticker-track">
+          <div class="ticker-inner" id="ticker"></div>
+        </div>
+      </div>
+
+      <div class="update-card">
+        <div class="update-row">
+          <div class="update-dot"></div>
+          <div class="update-label">Market Pulse — June 2025</div>
+          <div class="update-time">Q2 Report</div>
+        </div>
+        <div class="kpi-mini-grid">
+          <div class="kpi-mini">
+            <div class="kpi-mini-val g">6,840</div>
+            <div class="kpi-mini-lbl">Active Roles</div>
+            <div class="kpi-mini-delta delta-up">↑ +12% vs Q1</div>
+          </div>
+          <div class="kpi-mini-val-wrap kpi-mini">
+            <div class="kpi-mini-val gold">248K</div>
+            <div class="kpi-mini-lbl">Avg. Monthly (FCFA)</div>
+            <div class="kpi-mini-delta delta-up">↑ +8% YoY</div>
+          </div>
+          <div class="kpi-mini">
+            <div class="kpi-mini-val b">134</div>
+            <div class="kpi-mini-lbl">Hiring Companies</div>
+            <div class="kpi-mini-delta delta-up">↑ +18 new</div>
+          </div>
+          <div class="kpi-mini">
+            <div class="kpi-mini-val r">18%</div>
+            <div class="kpi-mini-lbl">Tech Demand Growth</div>
+            <div class="kpi-mini-delta delta-up">↑ Fastest sector</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- ═══════════════════════════════════
+       SECTION 1: TOP HIRING COMPANIES
+  ═══════════════════════════════════ -->
+  <div class="page-section" id="s-companies">
+    <div class="section-header">
+      <div class="section-eyebrow">
+        <div class="se-line" style="background:var(--blue)"></div>
+        <div class="se-text" style="color:var(--blue)">Section 01</div>
+      </div>
+      <div class="section-title">Top Hiring Companies</div>
+      <p class="section-desc">Cameroon's most active employers ranked by open roles, hiring frequency, and employer reputation score among job seekers.</p>
+    </div>
+
+    <!-- Company cards -->
+    <div class="companies-grid" id="companies-grid"></div>
+
+    <!-- Chart row -->
+    <div class="companies-chart-row">
+      <div class="chart-card">
+        <div class="chart-card-title">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="6" width="2" height="7" fill="var(--blue)" rx="1"/><rect x="5" y="3" width="2" height="10" fill="var(--blue)" rx="1" opacity=".7"/><rect x="9" y="1" width="2" height="12" fill="var(--blue)" rx="1" opacity=".5"/><rect x="13" y="4" width="2" height="9" fill="var(--blue)" rx="1" opacity=".6"/></svg>
+          Open Roles by Company — Top 10
+        </div>
+        <div class="chart-card-sub">Active job postings tracked across platforms · June 2025</div>
+        <div class="chart-wrap" style="height:300px"><canvas id="companiesBarChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Hiring by Sector</div>
+        <div class="chart-card-sub">Distribution of active openings</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="sectorDonut"></canvas></div>
+        <div class="sector-legend" id="sector-legend"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SECTION 2: JOB TREND CHARTS
+  ═══════════════════════════════════ -->
+  <div class="page-section" id="s-trends">
+    <div class="section-header">
+      <div class="section-eyebrow">
+        <div class="se-line" style="background:var(--green)"></div>
+        <div class="se-text" style="color:var(--green)">Section 02</div>
+      </div>
+      <div class="section-title">Job Trend Charts</div>
+      <p class="section-desc">Track how demand for roles, sectors, and skills is shifting across Cameroon — with 12-month historical data and 2025 projections.</p>
+    </div>
+
+    <div class="trends-layout">
+
+      <!-- Row 1: Big line chart -->
+      <div class="trend-card">
+        <div class="trend-card-head">
+          <div>
+            <div class="tc-title">Hiring Volume by Sector — 12 Months</div>
+            <div class="tc-sub">Monthly job postings tracked · Jan–Dec 2024 → Q1–Q2 2025</div>
+          </div>
+          <div class="tc-badge badge-up">↑ +18% YoY Tech</div>
+        </div>
+        <div class="chart-wrap" style="height:280px"><canvas id="sectorTrendLine"></canvas></div>
+      </div>
+
+      <!-- Row 2: Growth table + Demand bar -->
+      <div class="trend-row trend-row-2">
+        <div class="trend-card">
+          <div class="trend-card-head">
+            <div>
+              <div class="tc-title">Role Demand Growth Rankings</div>
+              <div class="tc-sub">YoY change in job postings · Cameroon 2024→2025</div>
+            </div>
+          </div>
+          <table class="growth-table">
+            <thead>
+              <tr>
+                <th>Role</th>
+                <th>Postings</th>
+                <th>Trend</th>
+                <th>Change</th>
+              </tr>
+            </thead>
+            <tbody id="growth-tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="trend-card">
+          <div class="trend-card-head">
+            <div>
+              <div class="tc-title">Emerging Skills Demand</div>
+              <div class="tc-sub">% growth in skill mentions in job postings</div>
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:260px"><canvas id="skillsGrowthBar"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Remote trend + Sector projection + Heatmap -->
+      <div class="trend-row trend-row-3">
+        <div class="trend-card">
+          <div class="trend-card-head">
+            <div>
+              <div class="tc-title">Remote vs Onsite Trends</div>
+              <div class="tc-sub">Share of remote-eligible postings · 2022–2025</div>
+            </div>
+            <div class="tc-badge badge-up">↑ Remote +34%</div>
+          </div>
+          <div class="chart-wrap" style="height:220px"><canvas id="remoteChart"></canvas></div>
+        </div>
+
+        <div class="trend-card">
+          <div class="trend-card-head">
+            <div>
+              <div class="tc-title">Contract Type Split</div>
+              <div class="tc-sub">CDI / CDD / Internship / Freelance</div>
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:220px"><canvas id="contractDonut"></canvas></div>
+        </div>
+
+        <div class="trend-card">
+          <div class="trend-card-head">
+            <div>
+              <div class="tc-title">City Demand Index</div>
+              <div class="tc-sub">Job concentration by city</div>
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:220px"><canvas id="cityBar"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 4: Demand heatmap -->
+      <div class="trend-card">
+        <div class="trend-card-head">
+          <div>
+            <div class="tc-title">Role × Month Demand Heatmap</div>
+            <div class="tc-sub">Hiring intensity per role per month — darker = higher demand</div>
+          </div>
+        </div>
+        <div id="heatmap-wrap"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SECTION 3: SALARY RANGES
+  ═══════════════════════════════════ -->
+  <div class="page-section" id="s-salary">
+    <div class="section-header">
+      <div class="section-eyebrow">
+        <div class="se-line" style="background:var(--gold)"></div>
+        <div class="se-text" style="color:var(--gold)">Section 03</div>
+      </div>
+      <div class="section-title">Salary Ranges — CM</div>
+      <p class="section-desc">Monthly salary benchmarks in FCFA for Cameroon's most in-demand roles, broken down by experience level. Negotiation data included.</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="salary-tabs">
+      <button class="stab active" onclick="switchSalaryTab('all',this)">All Sectors</button>
+      <button class="stab" onclick="switchSalaryTab('tech',this)">Technology</button>
+      <button class="stab" onclick="switchSalaryTab('finance',this)">Finance</button>
+      <button class="stab" onclick="switchSalaryTab('other',this)">Other</button>
+    </div>
+
+    <!-- Salary cards -->
+    <div class="salary-grid" id="salary-grid"></div>
+
+    <!-- Big comparison + percentile -->
+    <div class="salary-compare-row">
+      <div class="chart-card">
+        <div class="chart-card-title">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7h12M7 1v12" stroke="var(--gold)" stroke-width="1.4" stroke-linecap="round"/></svg>
+          Salary Range Comparison — Mid-Level (FCFA/month)
+        </div>
+        <div class="chart-card-sub">Min → Median → Max for top 12 roles · 2025</div>
+        <div class="chart-wrap" style="height:380px"><canvas id="salaryRangeChart"></canvas></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-title">Salary Percentile Benchmarks</div>
+        <div class="chart-card-sub">By experience level · FCFA/month</div>
+        <div style="margin-bottom:16px">
+          <div class="chart-wrap" style="height:200px"><canvas id="salaryPercentileChart"></canvas></div>
+        </div>
+        <table class="pct-table">
+          <thead><tr><th>Level</th><th>P25</th><th>Median</th><th>P75</th></tr></thead>
+          <tbody id="pct-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo"><span class="fl1">Skill</span><span class="fl2">Sync</span><span class="fl3"> CM</span></div>
+  <div class="footer-copy">Where Talent Meets Opportunity — Cameroon © 2025</div>
+  <div class="footer-links">
+    <a href="skillsync-home.html">Home</a>
+    <a href="skillsync-skill-gap.html">Skill Analyzer</a>
+    <a href="skillsync-opportunities.html">Opportunities</a>
+    <a href="#">About</a>
+  </div>
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   DATA
+══════════════════════════════════════════════════════ */
+
+const COMPANIES = [
+  { rank:1, name:'MTN Cameroon', abbr:'MTN', sector:'Telecom', sectorClass:'cc-telecom',
+    logoColor:'#FFCB00', logoBg:'rgba(255,203,0,0.12)', roles:['Network Eng.','Software Dev','Data Analyst','Finance'],
+    openRoles:84, hiringScore:94, yoe:'2–8 yrs', loc:'Douala & Yaoundé', status:'active',
+    desc:'Largest telecom employer — active across tech, finance, and operations.' },
+  { rank:2, name:'Orange Cameroon', abbr:'ORA', sector:'Telecom', sectorClass:'cc-telecom',
+    logoColor:'#FF6600', logoBg:'rgba(255,102,0,0.12)', roles:['IT Specialist','Marketing','Customer Success'],
+    openRoles:62, hiringScore:88, yoe:'1–6 yrs', loc:'Douala & Yaoundé', status:'active',
+    desc:'Strong tech & customer-facing roles; known for graduate programs.' },
+  { rank:3, name:'Société Générale CIB', abbr:'SG', sector:'Finance', sectorClass:'cc-finance',
+    logoColor:'#E8B84B', logoBg:'rgba(232,184,75,0.12)', roles:['Accountant','Financial Analyst','Risk Mgmt'],
+    openRoles:48, hiringScore:85, yoe:'2–10 yrs', loc:'Douala', status:'active',
+    desc:'Top-tier financial employer with structured progression paths.' },
+  { rank:4, name:'Guinness Cameroon', abbr:'GNS', sector:'FMCG', sectorClass:'cc-fmcg',
+    logoColor:'#E85C5C', logoBg:'rgba(232,92,92,0.12)', roles:['Supply Chain','Procurement','HR','Quality'],
+    openRoles:39, hiringScore:82, yoe:'2–7 yrs', loc:'Douala', status:'seasonal',
+    desc:'Diageo subsidiary — frequent seasonal campaigns and graduate intake.' },
+  { rank:5, name:'Afriland First Bank', abbr:'AFB', sector:'Finance', sectorClass:'cc-finance',
+    logoColor:'#E8B84B', logoBg:'rgba(232,184,75,0.1)', roles:['Credit Analyst','Branch Manager','IT Banking'],
+    openRoles:35, hiringScore:79, yoe:'1–8 yrs', loc:'Nationwide', status:'active',
+    desc:"Cameroon's largest indigenous bank — strong fintech and branch expansion hiring." },
+  { rank:6, name:'Total Energies CM', abbr:'TOT', sector:'Energy', sectorClass:'cc-energy',
+    logoColor:'#9B6EE8', logoBg:'rgba(155,110,232,0.12)', roles:['Civil Engineer','HSE Officer','IT','Finance'],
+    openRoles:31, hiringScore:91, yoe:'3–12 yrs', loc:'Douala & Limbe', status:'active',
+    desc:'Premier energy employer — premium salaries, strict safety culture.' },
+  { rank:7, name:'Digital Labs Cameroon', abbr:'DLC', sector:'Technology', sectorClass:'cc-tech',
+    logoColor:'#5C9EE8', logoBg:'rgba(92,158,232,0.12)', roles:['Full Stack Dev','UX Designer','Data Scientist'],
+    openRoles:28, hiringScore:87, yoe:'0–5 yrs', loc:'Buea & Remote', status:'active',
+    desc:'Fastest-growing tech studio — top destination for junior developers.' },
+  { rank:8, name:'UNICEF / UN Agencies', abbr:'UN', sector:'NGO', sectorClass:'cc-ngo',
+    logoColor:'#00C4B4', logoBg:'rgba(0,196,180,0.12)', roles:['M&E Specialist','Program Officer','ICT4D'],
+    openRoles:24, hiringScore:76, yoe:'2–10 yrs', loc:'Yaoundé', status:'active',
+    desc:'UN system agencies — competitive benefits and international exposure.' },
+  { rank:9, name:'Camtel', abbr:'CAM', sector:'Telecom', sectorClass:'cc-telecom',
+    logoColor:'#00C46A', logoBg:'rgba(0,196,106,0.1)', roles:['Network Technician','IT Engineer','Admin'],
+    openRoles:22, hiringScore:70, yoe:'1–6 yrs', loc:'Nationwide', status:'limited',
+    desc:'State telecom operator — stable employment across all regions.' },
+  { rank:10, name:'BEAC', abbr:'BEA', sector:'Finance', sectorClass:'cc-finance',
+    logoColor:'#E8B84B', logoBg:'rgba(232,184,75,0.1)', roles:['Economist','Statistician','IT Security'],
+    openRoles:18, hiringScore:88, yoe:'3–10 yrs', loc:'Yaoundé', status:'limited',
+    desc:'Central Bank of Central Africa — prestigious, merit-based competitive intake.' },
+  { rank:11, name:'Chococam / Tiger Brands', abbr:'CHC', sector:'FMCG', sectorClass:'cc-fmcg',
+    logoColor:'#E85C5C', logoBg:'rgba(232,92,92,0.1)', roles:['Production Mgr','Quality Assurance','Marketing'],
+    openRoles:17, hiringScore:74, yoe:'2–8 yrs', loc:'Douala', status:'seasonal',
+    desc:'Leading FMCG manufacturer — production and commercial openings every Q2.' },
+  { rank:12, name:'SIC Housing', abbr:'SIC', sector:'Real Estate', sectorClass:'cc-energy',
+    logoColor:'#9B6EE8', logoBg:'rgba(155,110,232,0.1)', roles:['Civil Eng.','Architect','Finance','Legal'],
+    openRoles:14, hiringScore:68, yoe:'2–10 yrs', loc:'Nationwide', status:'limited',
+    desc:'State housing agency scaling nationwide — surge in civil engineering demand.' },
+];
+
+const SALARY_DATA = [
+  { role:'Software Engineer', sector:'Technology', sectorTag:'tech', sectorColor:'var(--blue)',
+    min:180, median:320, max:620, yoy:'+12%', yoyUp:true,
+    factors:['Buea startups pay 20% above Yaoundé','React/Python add 25–40K premium','Remote roles near max range'] },
+  { role:'Data Analyst', sector:'Technology', sectorTag:'tech', sectorColor:'var(--blue)',
+    min:150, median:270, max:480, yoy:'+15%', yoyUp:true,
+    factors:['Power BI skills add 30K/month','Banking sector pays 40% above average','SQL + Python combo is gold standard'] },
+  { role:'Web Developer', sector:'Technology', sectorTag:'tech', sectorColor:'var(--blue)',
+    min:120, median:240, max:420, yoy:'+10%', yoyUp:true,
+    factors:['Freelance adds 50–80K on top','Mobile (Flutter/RN) commands premium','Portfolio quality heavily influences offer'] },
+  { role:'Financial Analyst', sector:'Finance', sectorTag:'finance', sectorColor:'var(--gold)',
+    min:200, median:340, max:600, yoy:'+8%', yoyUp:true,
+    factors:['CPA/ACCA adds 60–100K premium','Banking vs NGO: 30% gap','Modelling skills increasingly required'] },
+  { role:'Accountant', sector:'Finance', sectorTag:'finance', sectorColor:'var(--gold)',
+    min:130, median:220, max:400, yoy:'+5%', yoyUp:true,
+    factors:['OHADA expertise non-negotiable','Big4 firms pay top quartile','SAGE/QuickBooks add 15–20K'] },
+  { role:'Project Manager', sector:'Management', sectorTag:'other', sectorColor:'var(--purple)',
+    min:220, median:380, max:680, yoy:'+9%', yoyUp:true,
+    factors:['PMP cert adds 80–120K/month','UN/NGO sector pays best in class','Bilingualism adds 10–15% premium'] },
+  { role:'Network Engineer', sector:'Technology', sectorTag:'tech', sectorColor:'var(--blue)',
+    min:160, median:290, max:520, yoy:'+7%', yoyUp:true,
+    factors:['CCNP doubles entry salary','Telecom sector dominates hiring','Cloud skills increasingly valued'] },
+  { role:'Digital Marketer', sector:'Marketing', sectorTag:'other', sectorColor:'var(--teal)',
+    min:100, median:195, max:360, yoy:'+18%', yoyUp:true,
+    factors:['Performance marketing commands top pay','Growing fast but supply is catching up','Agency vs in-house: 20% gap'] },
+  { role:'HR Manager', sector:'Management', sectorTag:'other', sectorColor:'var(--purple)',
+    min:180, median:300, max:520, yoy:'+4%', yoyUp:true,
+    factors:['Labor law expertise essential','Multinationals pay 35% above local','Payroll+HRIS combo adds value'] },
+  { role:'Civil Engineer', sector:'Engineering', sectorTag:'other', sectorColor:'var(--red)',
+    min:200, median:350, max:650, yoy:'+6%', yoyUp:true,
+    factors:['Total Energies pays top quartile','Infrastructure boom driving demand','HSE certification adds 40K+'] },
+  { role:'Registered Nurse', sector:'Healthcare', sectorTag:'other', sectorColor:'var(--teal)',
+    min:100, median:175, max:310, yoy:'+3%', yoyUp:true,
+    factors:['UN agencies pay 2.5x private','Night/weekend shifts add 30%','Specialized roles command 50% more'] },
+  { role:'Secondary Teacher', sector:'Education', sectorTag:'other', sectorColor:'var(--muted)',
+    min:85, median:145, max:250, yoy:'+2%', yoyUp:true,
+    factors:['Private international schools pay 3x','Bilingual schools add 15–20K','Mathematics/Science highest demand'] },
+];
+
+const MONTHS_FULL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_TICK = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+
+/* ══════════════════════════════════════════════════════
+   NAV SCROLL
+══════════════════════════════════════════════════════ */
+window.addEventListener('scroll', () => {
+  document.getElementById('main-nav').classList.toggle('scrolled', scrollY > 40);
+});
+
+function scrollTo(id, btn) {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+  document.querySelectorAll('.snav-item').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* Active section tracking */
+const sectionIds = ['s-companies','s-trends','s-salary'];
+window.addEventListener('scroll', () => {
+  let current = sectionIds[0];
+  sectionIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top < 180) current = id;
+  });
+  document.querySelectorAll('.snav-item').forEach((btn, i) => {
+    btn.classList.toggle('active', sectionIds[i] === current);
+  });
+});
+
+/* ══════════════════════════════════════════════════════
+   TICKER
+══════════════════════════════════════════════════════ */
+const TICKER_ITEMS = [
+  { text: 'Software Engineer demand', val: '+18%', cls: 'tick-up' },
+  { text: 'MTN Cameroon open roles', val: '84', cls: 'tick-neutral' },
+  { text: 'Median tech salary Douala', val: '320K FCFA', cls: 'tick-neutral' },
+  { text: 'Remote jobs growth', val: '+34%', cls: 'tick-up' },
+  { text: 'Data Analyst growth YoY', val: '+15%', cls: 'tick-up' },
+  { text: 'Finance sector hiring', val: 'Stable', cls: 'tick-neutral' },
+  { text: 'Digital Marketer demand', val: '+18%', cls: 'tick-up' },
+  { text: 'FMCG seasonal campaigns', val: 'Q3 2025', cls: 'tick-neutral' },
+  { text: 'Project Manager median', val: '380K FCFA', cls: 'tick-neutral' },
+  { text: 'Cloud Engineer demand', val: '+22%', cls: 'tick-up' },
+];
+
+function buildTicker() {
+  const inner = document.getElementById('ticker');
+  const items = [...TICKER_ITEMS, ...TICKER_ITEMS]; // duplicate for seamless loop
+  inner.innerHTML = items.map(t => `
+    <div class="tick-item">
+      <div class="tick-dot" style="background:${t.cls==='tick-up'?'var(--green)':t.cls==='tick-dn'?'var(--red)':'var(--blue)'}"></div>
+      <span>${t.text}</span>
+      <span class="tick-val ${t.cls}">${t.val}</span>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════════════════
+   SECTION 1: COMPANIES
+══════════════════════════════════════════════════════ */
+function buildCompanies() {
+  const grid = document.getElementById('companies-grid');
+  grid.innerHTML = COMPANIES.slice(0, 12).map((c, i) => `
+    <div class="company-card ${c.sectorClass}" style="transition-delay:${i * 0.055}s">
+      <div class="cc-header">
+        <div class="cc-logo" style="background:${c.logoBg};color:${c.logoColor};border-color:${c.logoColor}22">
+          ${c.abbr.slice(0,2)}
+        </div>
+        <div class="cc-meta">
+          <div class="cc-name">${c.name}</div>
+          <div class="cc-sector" style="color:${c.logoColor}">${c.sector}</div>
+        </div>
+        <div class="cc-rank">#<span>${c.rank}</span></div>
+      </div>
+
+      <div class="cc-stats">
+        <div class="cc-stat">
+          <div class="cc-stat-val">${c.openRoles}</div>
+          <div class="cc-stat-lbl">Open Roles</div>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-val">${c.hiringScore}<span style="font-size:13px;font-weight:500;color:var(--muted)">/100</span></div>
+          <div class="cc-stat-lbl">Employer Score</div>
+        </div>
+      </div>
+
+      <div class="cc-roles">
+        ${c.roles.map(r => `<span class="cc-role-tag">${r}</span>`).join('')}
+      </div>
+
+      <div class="cc-footer">
+        <span class="cc-location">
+          <svg width="10" height="12" viewBox="0 0 10 12" fill="none"><path d="M5 1C2.8 1 1 2.8 1 5c0 3 4 7 4 7s4-4 4-7c0-2.2-1.8-4-4-4z" stroke="currentColor" stroke-width="1.2"/><circle cx="5" cy="5" r="1.3" stroke="currentColor" stroke-width="1.2"/></svg>
+          ${c.loc}
+        </span>
+        <span class="cc-hiring-badge ${c.status==='active'?'hiring-active':c.status==='seasonal'?'hiring-seasonal':'hiring-limited'}">
+          ${c.status==='active'?'Actively Hiring':c.status==='seasonal'?'Seasonal':'Limited Intake'}
+        </span>
+      </div>
+    </div>
+  `).join('');
+
+  // Staggered reveal
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.company-card').forEach((c, i) => {
+      setTimeout(() => c.classList.add('reveal'), i * 55);
+    });
+  });
+}
+
+function buildCompaniesCharts() {
+  // Bar chart
+  const top10 = COMPANIES.slice(0, 10);
+  new Chart(document.getElementById('companiesBarChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: top10.map(c => c.name.replace(' Cameroon','').replace(' First Bank','').replace(' Energies CM','')),
+      datasets: [{
+        label: 'Open Roles',
+        data: top10.map(c => c.openRoles),
+        backgroundColor: top10.map(c => c.logoColor + '55'),
+        borderColor: top10.map(c => c.logoColor),
+        borderWidth: 1.5,
+        borderRadius: 5,
+        barPercentage: 0.72,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 1400, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#0A1020', padding: 10, callbacks: {
+          label: ctx => ` ${ctx.raw} active openings · ${top10[ctx.dataIndex].sector}`
+        }}
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#4E6272', font: { size: 11 } } },
+        y: { grid: { display: false }, ticks: { color: '#B8CDD8', font: { size: 11.5 } } }
+      }
+    }
+  });
+
+  // Sector donut
+  const sectorMap = {};
+  COMPANIES.forEach(c => { sectorMap[c.sector] = (sectorMap[c.sector] || 0) + c.openRoles; });
+  const sectorColors = {
+    'Telecom': '#00C46A', 'Finance': '#E8B84B', 'Technology': '#5C9EE8',
+    'Energy': '#9B6EE8', 'FMCG': '#E85C5C', 'NGO': '#00C4B4',
+    'Real Estate': '#9B6EE8', 'Management': '#9B6EE8', 'Healthcare': '#00C4B4',
+    'Education': '#B8CDD8'
+  };
+  const sLabels = Object.keys(sectorMap);
+  const sVals = Object.values(sectorMap);
+  const sTotal = sVals.reduce((a, b) => a + b, 0);
+
+  new Chart(document.getElementById('sectorDonut').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: sLabels,
+      datasets: [{
+        data: sVals,
+        backgroundColor: sLabels.map(s => (sectorColors[s] || '#5A7080') + 'AA'),
+        borderColor: sLabels.map(s => sectorColors[s] || '#5A7080'),
+        borderWidth: 1.5,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      cutout: '68%',
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 1200 },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#0A1020', padding: 10 }
+      }
+    }
+  });
+
+  // Sector legend bars
+  const legend = document.getElementById('sector-legend');
+  legend.innerHTML = sLabels.sort((a,b) => sectorMap[b]-sectorMap[a]).map((s, i) => {
+    const pct = Math.round(sectorMap[s] / sTotal * 100);
+    return `
+      <div class="sl-row">
+        <div class="sl-dot" style="background:${sectorColors[s]||'#5A7080'}"></div>
+        <span style="min-width:72px;font-size:11px">${s}</span>
+        <div class="sl-bar-track">
+          <div class="sl-bar-fill" id="slbar-${i}" style="background:${sectorColors[s]||'#5A7080'}"></div>
+        </div>
+        <span class="sl-pct">${pct}%</span>
+      </div>
+    `;
+  }).join('');
+
+  setTimeout(() => {
+    sLabels.sort((a,b) => sectorMap[b]-sectorMap[a]).forEach((s, i) => {
+      const el = document.getElementById(`slbar-${i}`);
+      if (el) el.style.width = Math.round(sectorMap[s] / sectorMap[sLabels.sort((a,b)=>sectorMap[b]-sectorMap[a])[0]] * 100) + '%';
+    });
+  }, 400);
+}
+
+/* ══════════════════════════════════════════════════════
+   SECTION 2: TRENDS
+══════════════════════════════════════════════════════ */
+function buildTrends() {
+  const gridColor = 'rgba(255,255,255,0.05)';
+
+  // 1. Sector trend line (12 months)
+  const sectorLines = [
+    { label: 'Technology', color: '#5C9EE8', data: [380,395,410,430,455,480,505,490,520,545,568,590] },
+    { label: 'Finance',    color: '#E8B84B', data: [290,298,295,310,308,320,315,330,340,338,350,345] },
+    { label: 'Telecom',    color: '#00C46A', data: [260,275,268,280,295,288,300,310,305,318,325,330] },
+    { label: 'FMCG',       color: '#E85C5C', data: [180,185,200,210,195,210,225,240,230,215,210,205] },
+    { label: 'NGO / Dev',  color: '#00C4B4', data: [130,138,145,142,155,160,158,165,170,168,175,180] },
+  ];
+
+  new Chart(document.getElementById('sectorTrendLine').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: MONTHS_FULL,
+      datasets: sectorLines.map(s => ({
+        label: s.label,
+        data: s.data,
+        borderColor: s.color,
+        backgroundColor: s.color + '10',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointHoverRadius: 6,
+        pointBackgroundColor: s.color,
+        tension: 0.4,
+        fill: false,
+      }))
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 1500 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#4E6272', padding: 16, font: { size: 11 }, usePointStyle: true } },
+        tooltip: { backgroundColor: '#0A1020', padding: 12 }
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: '#4E6272', font: { size: 11 } } },
+        y: { grid: { color: gridColor }, ticks: { color: '#4E6272', font: { size: 11 } }, title: { display: true, text: 'Job Postings', color: '#4E6272', font: { size: 11 } } }
+      }
+    }
+  });
+
+  // 2. Growth table
+  const growthData = [
+    { role: 'Cloud Engineer',    postings: 1240, change: '+22%', up: true,  spark: [40,48,52,60,68,75,82,90,98,108,118,130] },
+    { role: 'Digital Marketer',  postings: 2180, change: '+18%', up: true,  spark: [80,88,95,100,110,115,125,130,140,150,160,175] },
+    { role: 'Data Analyst',      postings: 1860, change: '+15%', up: true,  spark: [70,76,82,88,96,104,110,118,126,134,144,155] },
+    { role: 'Software Engineer', postings: 3240, change: '+12%', up: true,  spark: [180,192,200,212,220,230,244,256,268,280,295,310] },
+    { role: 'Project Manager',   postings: 2040, change: '+9%',  up: true,  spark: [110,115,118,122,126,130,134,138,143,148,155,162] },
+    { role: 'Financial Analyst', postings: 1580, change: '+8%',  up: true,  spark: [90,94,96,100,103,108,112,116,120,124,130,136] },
+    { role: 'HR Manager',        postings:  980, change: '+4%',  up: true,  spark: [55,56,57,58,59,60,61,62,63,64,65,67] },
+    { role: 'Accountant',        postings: 2200, change: '+5%',  up: true,  spark: [120,122,124,126,128,130,132,134,136,138,140,143] },
+    { role: 'Civil Engineer',    postings: 1100, change: '+6%',  up: true,  spark: [60,62,64,65,67,68,70,72,74,76,78,80] },
+    { role: 'Secondary Teacher', postings: 3100, change: '+2%',  up: true,  spark: [155,156,157,158,159,160,161,162,163,164,165,166] },
+  ];
+
+  const tbody = document.getElementById('growth-tbody');
+  tbody.innerHTML = growthData.map((r, i) => {
+    const colors = ['#5C9EE8','#00C4B4','#5C9EE8','#5C9EE8','#9B6EE8','#E8B84B','#9B6EE8','#E8B84B','#E85C5C','#B8CDD8'];
+    return `
+      <tr>
+        <td>
+          <span class="role-dot" style="background:${colors[i]}"></span>
+          ${r.role}
+        </td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--white)">${r.postings.toLocaleString()}</td>
+        <td>
+          <canvas class="gt-spark" id="spark-${i}" width="48" height="20"></canvas>
+        </td>
+        <td>
+          <span class="gt-change ${r.up ? 'gt-up' : 'gt-down'}">${r.change}</span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Render mini sparklines
+  growthData.forEach((r, i) => {
+    setTimeout(() => {
+      const c = document.getElementById(`spark-${i}`);
+      if (!c) return;
+      const ctx = c.getContext('2d');
+      const color = r.up ? '#00C46A' : '#E85C5C';
+      const min = Math.min(...r.spark), max = Math.max(...r.spark);
+      const w = 48, h = 20;
+      ctx.clearRect(0, 0, w, h);
+      ctx.beginPath();
+      r.spark.forEach((v, j) => {
+        const x = (j / (r.spark.length - 1)) * (w - 4) + 2;
+        const y = h - 2 - ((v - min) / (max - min + 1)) * (h - 4);
+        j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }, i * 30);
+  });
+
+  // 3. Skills growth bar
+  const skillsData = {
+    labels: ['Cloud/AWS','React/Next.js','Python AI','Power BI','Docker','Figma','Node.js','PostgreSQL','Agile/Scrum','TypeScript'],
+    data:   [44, 38, 35, 32, 28, 26, 22, 19, 17, 15],
+    colors: ['#5C9EE8','#61DAFB','#E8B84B','#F2C811','#2496ED','#9B6EE8','#68A063','#336791','#00C46A','#3178C6'],
+  };
+
+  new Chart(document.getElementById('skillsGrowthBar').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: skillsData.labels,
+      datasets: [{
+        label: '% Growth in Job Postings',
+        data: skillsData.data,
+        backgroundColor: skillsData.colors.map(c => c + '66'),
+        borderColor: skillsData.colors,
+        borderWidth: 1.5,
+        borderRadius: 5,
+        barPercentage: 0.7,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 1400 },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#0A1020', padding: 10,
+          callbacks: { label: ctx => ` +${ctx.raw}% growth in job postings` }
+        }
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: '#4E6272', font: { size: 11 }, callback: v => '+' + v + '%' } },
+        y: { grid: { display: false }, ticks: { color: '#B8CDD8', font: { size: 11.5 } } }
+      }
+    }
+  });
+
+  // 4. Remote vs Onsite stacked area
+  new Chart(document.getElementById('remoteChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: ['2022 Q1','Q2','Q3','Q4','2023 Q1','Q2','Q3','Q4','2024 Q1','Q2','Q3','Q4','2025 Q1','Q2'],
+      datasets: [
+        { label: 'Remote', data: [8,9,11,12,14,16,18,20,22,25,27,30,32,35],
+          borderColor: '#00C46A', backgroundColor: 'rgba(0,196,106,0.12)', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 2 },
+        { label: 'Hybrid', data: [10,12,13,14,15,16,17,18,20,21,22,23,24,25],
+          borderColor: '#5C9EE8', backgroundColor: 'rgba(92,158,232,0.08)', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 2 },
+        { label: 'Onsite Only', data: [82,79,76,74,71,68,65,62,58,54,51,47,44,40],
+          borderColor: '#E85C5C', backgroundColor: 'rgba(232,92,92,0.06)', fill: true, tension: 0.4, borderWidth: 1.5, pointRadius: 2 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 1300 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#4E6272', padding: 12, font: { size: 10.5 }, usePointStyle: true } },
+        tooltip: { backgroundColor: '#0A1020', padding: 10, callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}%`
+        }}
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: '#4E6272', font: { size: 9 }, maxRotation: 45 } },
+        y: { grid: { color: gridColor }, ticks: { color: '#4E6272', font: { size: 10 }, callback: v => v + '%' } }
+      }
+    }
+  });
+
+  // 5. Contract type donut
+  new Chart(document.getElementById('contractDonut').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      labels: ['CDI (Permanent)','CDD (Fixed-term)','Internship','Freelance / Contract'],
+      datasets: [{
+        data: [38, 32, 20, 10],
+        backgroundColor: ['rgba(0,196,106,0.7)','rgba(92,158,232,0.7)','rgba(232,184,75,0.7)','rgba(155,110,232,0.7)'],
+        borderColor: ['#00C46A','#5C9EE8','#E8B84B','#9B6EE8'],
+        borderWidth: 1.5, hoverOffset: 5,
+      }]
+    },
+    options: {
+      cutout: '62%',
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 1200 },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#4E6272', padding: 10, font: { size: 10 }, usePointStyle: true } },
+        tooltip: { backgroundColor: '#0A1020', padding: 10 }
+      }
+    }
+  });
+
+  // 6. City demand bar
+  new Chart(document.getElementById('cityBar').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['Douala','Yaoundé','Buea','Bafoussam','Bamenda','Limbe','Remote'],
+      datasets: [{
+        label: 'Job Index',
+        data: [100, 78, 42, 18, 14, 12, 35],
+        backgroundColor: ['rgba(0,196,106,0.65)','rgba(92,158,232,0.65)','rgba(232,184,75,0.6)','rgba(155,110,232,0.55)','rgba(232,92,92,0.55)','rgba(0,196,180,0.55)','rgba(92,158,232,0.5)'],
+        borderColor: ['#00C46A','#5C9EE8','#E8B84B','#9B6EE8','#E85C5C','#00C4B4','#5C9EE8'],
+        borderWidth: 1.5, borderRadius: 5, barPercentage: 0.7,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 1200 },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: '#0A1020', padding: 10, callbacks: {
+          label: ctx => ` Demand Index: ${ctx.raw} (Douala = 100)`
+        }}
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#4E6272', font: { size: 10.5 }, maxRotation: 30 } },
+        y: { grid: { color: gridColor }, ticks: { color: '#4E6272', font: { size: 10 } } }
+      }
+    }
+  });
+
+  // 7. Demand heatmap
+  buildHeatmap();
+}
+
+function buildHeatmap() {
+  const HMAP_ROLES = ['Software Eng.','Data Analyst','Financial Analyst','Accountant','Project Mgr','Nurse'];
+  const HMAP_DATA = [
+    [55,60,70,75,80,90,85,88,90,82,78,70],
+    [50,55,65,70,80,85,80,82,85,78,72,65],
+    [60,65,68,72,75,78,76,80,82,78,74,70],
+    [55,58,62,65,68,72,70,74,76,72,68,62],
+    [45,50,55,60,65,70,68,72,74,70,64,58],
+    [70,72,74,76,78,80,82,80,78,76,74,72],
+  ];
+  const maxVal = 90, minVal = 45;
+
+  const wrap = document.getElementById('heatmap-wrap');
+
+  // Month labels row
+  let html = `<div style="display:grid;grid-template-columns:100px repeat(12,1fr);gap:4px;margin-bottom:4px">
+    <div></div>
+    ${MONTHS_TICK.map(m => `<div style="text-align:center;font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;padding:2px 0">${m}</div>`).join('')}
+  </div>`;
+
+  HMAP_ROLES.forEach((role, ri) => {
+    html += `<div style="display:grid;grid-template-columns:100px repeat(12,1fr);gap:4px;margin-bottom:4px;align-items:center">
+      <div style="font-size:10.5px;color:var(--text);text-align:right;padding-right:8px;font-family:'DM Mono',monospace">${role}</div>
+      ${HMAP_DATA[ri].map((v, ci) => {
+        const intensity = (v - minVal) / (maxVal - minVal);
+        const alpha = 0.12 + intensity * 0.65;
+        const textAlpha = 0.4 + intensity * 0.6;
+        return `<div style="border-radius:5px;background:rgba(0,196,106,${alpha});border:1px solid rgba(0,196,106,${alpha * 0.5});aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:'DM Mono',monospace;color:rgba(255,255,255,${textAlpha});transition:transform .15s;cursor:default" title="${role} — ${MONTHS_FULL[ci]}: ${v}">${v}</div>`;
+      }).join('')}
+    </div>`;
+  });
+
+  // Legend
+  html += `<div style="display:flex;align-items:center;gap:8px;margin-top:12px;justify-content:flex-end">
+    <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">Low</span>
+    ${Array.from({length:8},(_,i) => {
+      const a = 0.12 + (i/7) * 0.65;
+      return `<div style="width:18px;height:10px;border-radius:3px;background:rgba(0,196,106,${a})"></div>`;
+    }).join('')}
+    <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">High</span>
+  </div>`;
+
+  wrap.innerHTML = html;
+}
+
+/* ══════════════════════════════════════════════════════
+   SECTION 3: SALARY
+══════════════════════════════════════════════════════ */
+let activeSalaryTab = 'all';
+
+function buildSalaryCards(filter) {
+  const grid = document.getElementById('salary-grid');
+  const filtered = filter === 'all' ? SALARY_DATA : SALARY_DATA.filter(s => s.sectorTag === filter);
+  const absMin = Math.min(...SALARY_DATA.map(s => s.min));
+  const absMax = Math.max(...SALARY_DATA.map(s => s.max));
+
+  grid.innerHTML = filtered.map((s, i) => {
+    const rangeWidth = ((s.max - s.min) / absMax) * 100;
+    const rangeLeft  = (s.min / absMax) * 100;
+    const gradColors = { tech: '#5C9EE8', finance: '#E8B84B', other: '#9B6EE8' };
+    const gc = gradColors[s.sectorTag] || '#00C46A';
+    const sectorBadgeStyle = `background:${gc}18;border:1px solid ${gc}38;color:${gc}`;
+    return `
+      <div class="salary-card" style="transition-delay:${i * 0.05}s">
+        <div class="sc-header">
+          <div class="sc-role">${s.role}</div>
+          <div class="sc-sector-tag" style="${sectorBadgeStyle}">${s.sector}</div>
+        </div>
+
+        <div class="sc-median">
+          <div>
+            <div class="sc-median-val">${s.median.toLocaleString()}K</div>
+            <div class="sc-median-lbl">FCFA / month — median</div>
+          </div>
+          <div class="sc-yoy ${s.yoyUp ? 'yoy-up' : 'yoy-dn'}">${s.yoy} YoY</div>
+        </div>
+
+        <div class="sc-range">
+          <div class="sc-range-label">Salary Band</div>
+          <div class="sc-range-track">
+            <div class="sc-range-fill" style="left:${rangeLeft}%;width:${rangeWidth}%">
+              <div class="sc-range-fill-inner" style="background:linear-gradient(90deg,${gc}55,${gc}CC)"></div>
+            </div>
+          </div>
+          <div class="sc-range-markers">
+            <span>${s.min}K min</span>
+            <span>${s.max}K max</span>
+          </div>
+        </div>
+
+        <div class="sc-factors">
+          ${s.factors.map(f => `<div class="sc-factor"><div class="sc-factor-dot"></div>${f}</div>`).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.salary-card').forEach((c, i) => {
+      setTimeout(() => c.classList.add('reveal'), i * 50);
+    });
+  });
+}
+
+function switchSalaryTab(tab, btn) {
+  activeSalaryTab = tab;
+  document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildSalaryCards(tab);
+}
+
+function buildSalaryCharts() {
+  const gridColor = 'rgba(255,255,255,0.05)';
+
+  // Salary range floating bar
+  const roles = SALARY_DATA.slice(0, 12);
+  new Chart(document.getElementById('salaryRangeChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: roles.map(r => r.role),
+      datasets: [
+        {
+          label: 'Min',
+          data: roles.map(r => r.min),
+          backgroundColor: 'transparent',
+          borderWidth: 0,
+          stack: 'salary',
+        },
+        {
+          label: 'Range',
+          data: roles.map(r => r.max - r.min),
+          backgroundColor: roles.map(r => {
+            const gc = { tech: '#5C9EE8', finance: '#E8B84B', other: '#9B6EE8' }[r.sectorTag] || '#00C46A';
+            return gc + '66';
+          }),
+          borderColor: roles.map(r => {
+            return { tech: '#5C9EE8', finance: '#E8B84B', other: '#9B6EE8' }[r.sectorTag] || '#00C46A';
+          }),
+          borderWidth: 1.5,
+          borderRadius: 4,
+          stack: 'salary',
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 1500 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0A1020', padding: 12,
+          callbacks: {
+            label: (ctx) => {
+              if (ctx.datasetIndex === 0) return null;
+              const r = roles[ctx.dataIndex];
+              return [` Range: ${r.min}K – ${r.max}K FCFA/month`, ` Median: ${r.median}K FCFA/month`, ` YoY: ${r.yoy}`];
+            },
+            title: ctx => roles[ctx[0].dataIndex].role,
+          },
+          filter: ctx => ctx.datasetIndex === 1,
+        }
+      },
+      scales: {
+        x: { grid: { color: gridColor }, stacked: true, ticks: { color: '#4E6272', font: { size: 10.5 }, callback: v => v + 'K' } },
+        y: { grid: { display: false }, stacked: true, ticks: { color: '#B8CDD8', font: { size: 11 } } }
+      }
+    }
+  });
+
+  // Percentile radar
+  const levels = ['Entry (0-2yr)','Junior (2-4yr)','Mid (4-6yr)','Senior (6-10yr)','Lead (10yr+)'];
+  new Chart(document.getElementById('salaryPercentileChart').getContext('2d'), {
+    type: 'radar',
+    data: {
+      labels: ['Tech','Finance','Mgmt','Eng.','Healthcare','Education'],
+      datasets: [
+        { label: 'Senior', data: [540, 480, 580, 560, 280, 200],
+          borderColor: '#00C46A', backgroundColor: 'rgba(0,196,106,0.1)', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#00C46A' },
+        { label: 'Mid-Level', data: [300, 290, 340, 330, 175, 145],
+          borderColor: '#E8B84B', backgroundColor: 'rgba(232,184,75,0.08)', borderWidth: 1.5, pointRadius: 3, pointBackgroundColor: '#E8B84B' },
+        { label: 'Entry', data: [165, 155, 190, 185, 100, 85],
+          borderColor: '#5C9EE8', backgroundColor: 'rgba(92,158,232,0.07)', borderWidth: 1.5, pointRadius: 3, pointBackgroundColor: '#5C9EE8' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 1200 },
+      scales: {
+        r: {
+          min: 0, max: 620,
+          ticks: { display: false },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          pointLabels: { color: '#4E6272', font: { size: 10, family: "'DM Mono',monospace" } },
+          angleLines: { color: 'rgba(255,255,255,0.04)' },
+        }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#4E6272', padding: 12, font: { size: 10.5 }, usePointStyle: true } },
+        tooltip: { backgroundColor: '#0A1020', padding: 10, callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}K FCFA/mo`
+        }}
+      }
+    }
+  });
+
+  // Percentile table
+  const pctData = [
+    { level: 'Entry (0–2 yrs)', p25: 95, median: 130, p75: 185 },
+    { level: 'Junior (2–4 yrs)', p25: 155, median: 215, p75: 290 },
+    { level: 'Mid-Level (4–6 yrs)', p25: 230, median: 310, p75: 420 },
+    { level: 'Senior (6–10 yrs)', p25: 340, median: 460, p75: 600 },
+    { level: 'Lead / Principal', p25: 480, median: 640, p75: 900 },
+  ];
+  const pColors = ['#5C9EE8','#00C4B4','#E8B84B','#00C46A','#9B6EE8'];
+  document.getElementById('pct-tbody').innerHTML = pctData.map((r, i) => `
+    <tr>
+      <td style="font-size:12px"><span class="pct-pill" style="background:${pColors[i]}18;color:${pColors[i]};border:1px solid ${pColors[i]}30">${r.level}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${r.p25}K</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12.5px;color:var(--white);font-weight:600">${r.median}K</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--green)">${r.p75}K</td>
+    </tr>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════════════════
+   SCROLL REVEAL
+══════════════════════════════════════════════════════ */
+function initReveal() {
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('reveal');
+        obs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.company-card, .salary-card').forEach(el => obs.observe(el));
+}
+
+/* ══════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════ */
+buildTicker();
+buildCompanies();
+buildCompaniesCharts();
+buildTrends();
+buildSalaryCards('all');
+buildSalaryCharts();
+initReveal();
+</script>
+</body>
+</html>
