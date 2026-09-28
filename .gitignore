@@ -51,3 +51,11 @@ node_modules/
 # Temporary files
 *.tmp
 *.bak
+# Microsoft Office temporary files
+~$*
+*.tmp
+
+# Word/Excel/PowerPoint temp files
+~$*.docx
+~$*.xlsx
+~$*.pptx
